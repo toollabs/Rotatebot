@@ -1,4 +1,4 @@
-<?php 
+<?php
 /* Copyright © by Luxo & Saibo, 2011
 
     This program is free software: you can redistribute it and/or modify
@@ -15,46 +15,45 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-$homedir = "/home/luxo/rotbot/";
+$homedir = "/data/project/sbot/Rotatebot/";
 $myLockfile = $homedir."rotatebotlock";
 
-ini_set('memory_limit', '100M'); //Speicher auf 100 MBytes hochsetzen  
-ini_set('user_agent', ' User:Rotatebot by Luxo on the Toolserver / PHP');
+ini_set('memory_limit', '100M'); //Speicher auf 100 MBytes hochsetzen
+ini_set('user_agent', ' SteinsplitterBot by Luxo on the WMFLABS / PHP');
 
 
 logfile("Starte Bot!");
 $config = botsetup();
 if($config['active'] == "false") {
-	die("Bot disabled.");
+        die("Bot disabled.");
 } else if($config['active'] != "true") {
-	die("Bot error.");
+        die("Bot error.");
 }
 
 // Killer bot
 if ($config['killAllRotatebots'] == "true") {
-	logfile("ATTENTION: Going to killAllRotatebots (also myself)!");
- 	// "php rotbot/rotbot.php" needs to be the process name	
-	logfile("signal 15");
-	system("pkill -15 -f 'php rotbot/rotbot.php'");
-	sleep(10);
-	logfile("signal 9");
-	system("pkill -9 -f 'php rotbot/rotbot.php'");
-	// we should be all dead now
+        logfile("ATTENTION: Going to killAllRotatebots (also myself)!");
+        // "php rotbot/rotbot.php" needs to be the process name
+        logfile("signal 15");
+        system("pkill -15 -f 'php rotbot/rotbot.php'");
+        sleep(10);
+        logfile("signal 9");
+        system("pkill -9 -f 'php rotbot/rotbot.php'");
+        // we should be all dead now
 }
 
 $dontDieOnLockProblems = false;
 if ($config['dontDieOnLockProblems'] == "true") {
-	logfile("ATTENTION: dontDieOnLockProblems is true! Lockfile problems (like lockfile already present) will be ignored.");
-	$dontDieOnLockProblems = true;
+        logfile("ATTENTION: dontDieOnLockProblems is true! Lockfile problems (like lockfile already present) will be ignored.");
+        $dontDieOnLockProblems = true;
 }
 getLockOrDie($dontDieOnLockProblems); //check for other concurrently running rotatebot instances. Exit if not alone on the world
-// continue ONLY if we are not dead ... 
+// continue ONLY if we are not dead ...
 // after this line only suicide() should be done instead of die()!
 
 
 logfile("Verbinde zur Datenbank!");
-include("/home/luxo/public_html/contributions/logindata.php");
-$myslink = mysql_connect('sql-s2-rr', $userloginname, $databasepw) or suicide ("Can't connect to MySQL");
+$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'PASSWD') or suicide ("Can't connect to MySQL");
 $database = "commonswiki_p";
 mysql_select_db($database, $myslink)
                         or suicide ("Konnte $databas nicht öffnen: ".mysql_error());
@@ -81,7 +80,7 @@ foreach($contentarray['query']['categorymembers'] as $temp_img)
 {
   if($temp_img['ns'] == 6)
   {
-    $contentarray['pages'][] = $temp_img; 
+    $contentarray['pages'][] = $temp_img;
   }
 }
 
@@ -145,36 +144,36 @@ else { $wrongfile = true;
         }
 //sortkey ab umbruchstelle beschneiden
 $picture["sortkey"] = trim(stristr(hexToStr($picture["sortkey"]), "\n", true));
- 
+
 // Do not process big images ...
 logfile("Size of this picture: ".$picture['imageinfo']['0']["size"]." bytes. Limit set to ".$config['fileSizeLimit']." bytes");
-	if($picture['imageinfo']['0']["size"] > $config['fileSizeLimit']) {
-		logfile("File bigger (".$picture['imageinfo']['0']["size"]." B) than limit (".$config['fileSizeLimit']." B)");
-		$wrongfiles[$picture["title"]] = "File bigger (".$picture['imageinfo']['0']["size"]." B) than limit (".$config['fileSizeLimit']." B). Please wait until someone does a lossless(!) fix by hand.";
-		$wrongfile = true;
-	}
+        if($picture['imageinfo']['0']["size"] > $config['fileSizeLimit']) {
+                logfile("File bigger (".$picture['imageinfo']['0']["size"]." B) than limit (".$config['fileSizeLimit']." B)");
+                $wrongfiles[$picture["title"]] = "File bigger (".$picture['imageinfo']['0']["size"]." B) than limit (".$config['fileSizeLimit']." B). Please wait until someone does a lossless(!) fix by hand.";
+                $wrongfile = true;
+        }
 
 
- //Korrekte Grade/Aktion prüfen     
-	if($picture["sortkey"] != 90 AND $picture["sortkey"] != 180 AND $picture["sortkey"] != 270) {
-		// exceptions for jpegs... last chance. ;-) 
-		if(($catcontent[$arraykey]['filetype'] == "jpg" AND ($picture["sortkey"] == "RESETEXIF" OR  $picture["sortkey"] == "0" OR  $picture["sortkey"] == "00" OR $picture["sortkey"] == "000" ))) {
-			// okay, jpg AND (reset OR 0°) requested (cannot include in the in comparision since any string would match == 0) - EXIF based orientation should be applied apparently or be resetted
-		} else {	
-			logfile("wrong degree-parameter (".$picture["sortkey"]."°)");
-			$wrongfiles[$picture["title"]] = "wrong degree-parameter (".$picture["sortkey"]."°)";
-			$wrongfile = true;
-		}
-	}
-	
-	//Do not process images younger than x minutes
-	$lagTime = $config['lag'] * 60;
-	$settimestamp   = timestampto(trim($picture["timestamp"]),true);
-	$inCatSince     = time() - $settimestamp;
+ //Korrekte Grade/Aktion prüfen
+        if($picture["sortkey"] != 90 AND $picture["sortkey"] != 180 AND $picture["sortkey"] != 270) {
+                // exceptions for jpegs... last chance. ;-)
+                if(($catcontent[$arraykey]['filetype'] == "jpg" AND ($picture["sortkey"] == "RESETEXIF" OR  $picture["sortkey"] == "0" OR  $picture["sortkey"] == "00" OR $picture["sortkey"] == "000" ))) {
+                        // okay, jpg AND (reset OR 0°) requested (cannot include in the in comparision since any string would match == 0) - EXIF based orientation should be applied apparently or be resetted
+                } else {
+                        logfile("wrong degree-parameter (".$picture["sortkey"]."°)");
+                        $wrongfiles[$picture["title"]] = "wrong degree-parameter (".$picture["sortkey"]."°)";
+                        $wrongfile = true;
+                }
+        }
+
+        //Do not process images younger than x minutes
+        $lagTime = $config['lag'] * 60;
+        $settimestamp   = timestampto(trim($picture["timestamp"]),true);
+        $inCatSince     = time() - $settimestamp;
   logfile("set at: '".$settimestamp."' (".$picture["timestamp"].") Lag: ".$lagTime." seconds, in the category since ".$inCatSince." seconds.");
-	
+
   if($inCatSince < $lagTime)
-	{
+        {
     $wrongfile = true;
     logfile("Picture younger than ".$lagTime." seconds. \n\nSORT OUT\n\n");
   }  else {
@@ -185,7 +184,7 @@ logfile("Size of this picture: ".$picture['imageinfo']['0']["size"]." bytes. Lim
 //User, der das Template gesetzt hat, identifizieren
 
 $revitimestp = trim($picture["timestamp"]);
- 
+
 foreach($picture['revisions'] as $key => $revisions)
 {
   if(trim($revisions['timestamp']) == $revitimestp)
@@ -200,7 +199,7 @@ foreach($picture['revisions'] as $key => $revisions)
     $ctxctx = file_get_contents("http://commons.wikimedia.org/w/api.php?action=query&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=php") or suicide("api error");
     $totrevs = unserialize($ctxctx);
     logfile("ID: ".$picture['pageid']." ");
-    
+
     if(is_array($totrevs))
     {
       foreach($totrevs['query']['pages'] as $cxxx)
@@ -218,7 +217,7 @@ foreach($picture['revisions'] as $key => $revisions)
     else
     {
       logfile("API: Error: not a array!");
-      logfile($totrevs);      
+      logfile($totrevs);
     }
   }
 }
@@ -229,11 +228,11 @@ if($catcontent[$arraykey]['tmplsetter']) //autoconfirmed
 {
   $wgAuthor = $catcontent[$arraykey]['tmplsetter'];
   logfile("check user ".$wgAuthor.".");
-  
+
   //Datenbank abfragen nach status
   if(!$cachedbar["$wgAuthor"])
   {
-    $mysresult = mysql_query( "SELECT * FROM user WHERE user_name='".mysql_real_escape_string($wgAuthor)."'") or suicide("MySQL error");
+    $mysresult = mysql_query( "SELECT user_id, user_name, user_registration, user_editcount FROM user WHERE user_name='".mysql_real_escape_string($wgAuthor)."'") or suicide("MySQL error");
     $a_row = mysql_fetch_row($mysresult);
     $cachedbar[$wgAuthor] = $a_row;
   }
@@ -241,23 +240,23 @@ if($catcontent[$arraykey]['tmplsetter']) //autoconfirmed
   {
     $a_row = $cachedbar["$wgAuthor"];
   }
-  
-  
+
+
   $setuserid = $a_row[0];
   $user_registration = $a_row[2];
   $user_editcount = $a_row[3];
   $chckx = $user_registration;//zum prüfen
-  
+
   if(!$setuserid){ $setuserid = "-"; }
   if(!$user_editcount){ $user_editcount = 0; }
   if(!$user_registration){ $user_registration = 20070101000000; $vcx = true; } //alte accounts haben diesen zeitstempel noch nicht
-  
+
   logfile("Edits: ".$user_editcount);
   logfile("Registred at: ".$user_registration);
   //Wikizeitstempel in unixzeit umrechnen
-  
+
   $regiUnix = TsToUnixTime($user_registration);
-  
+
   $actuUnix = time();
   $registeredtime = $actuUnix - $regiUnix;
   $registereddays = number_format($registeredtime / 86400,1,"."," ");//Stunden ausrechnen und runden/formatieren
@@ -274,14 +273,14 @@ if($catcontent[$arraykey]['tmplsetter']) //autoconfirmed
   } else {
     $xx = ""; //autoconfirmed
   }
-  
+
   if($vcx == true)
   {
     $registereddays = "?";
   }
-  
+
   $userforlog[$wgAuthor] = "***$wgAuthor, userid $setuserid, $user_editcount edits, registered since $registereddays days, is '''".$xx."autoconfirmed.'''";
-  
+
   if($config['mincontribs'] > 0 AND $user_editcount < $config['mincontribs']) //zu wenige edits
   {
     if($config['rotatepermission'] == "1")
@@ -308,7 +307,7 @@ Im moment deaktiviert
   //$wrongfile = true;
   //$wrongfiles[$picture["title"]] = "Image can't be rotated by Rotatebot because it has a senseless title. Please rename first.";
   $addrename[$picture["title"]] = true;
-} else { 
+} else {
   $addrename[$picture["title"]] = false;
 }
 
@@ -316,7 +315,7 @@ Im moment deaktiviert
 if($wrongfile == false) //Bild scheint OK zu sein
 {
   logfile("picture and user check finished, sorted for download");
-  
+
   $catcontent[$arraykey]['title']    = str_replace(" ", "_", $picture["title"]);
   $catcontent[$arraykey]['degree']   = $picture["sortkey"];
   $catcontent[$arraykey]['since']    = $revitimestp;
@@ -327,7 +326,7 @@ if($wrongfile == false) //Bild scheint OK zu sein
   $catcontent[$arraykey]['upltime']  = $picture['imageinfo']['0']['timestamp'];
   $catcontent[$arraykey]['size']     = $picture['imageinfo']['0']['width']."x".$picture['imageinfo']['0']['height'];
   $catcontent[$arraykey]['exifkey']  = 0;
-  $catcontent[$arraykey]['exifkeyafter']  = 0;      
+  $catcontent[$arraykey]['exifkeyafter']  = 0;
   $catcontent[$arraykey]['exifwriteerr']  = "";
   $arraykey = $arraykey +1;
 }
@@ -368,11 +367,11 @@ $file = file_get_contents($arraycontent['url']) or suicide("Kann ".$arraycontent
 
 $fp = fopen($savepath.$filename.".".$arraycontent['filetype'], "wb+");
 fwrite($fp, $file);
-fclose($fp); 
+fclose($fp);
 //sleep(1);
 }
 $file = "";//Datei löschen um Speicherplatz zu bekommen
-logfile("Download finished!");      
+logfile("Download finished!");
 
 
 
@@ -384,75 +383,75 @@ foreach($catcontent as $filename => $arraycontent)
   if($arraycontent['filetype'] == "jpg") //Für JPEG lossless methode
   {
      //Exif auslesen
-     // /home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation -b 1.jpg     -a is to get dupe tags, too
-     $exif = system("/home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation -b -a ".$savepath.$filename.".".$arraycontent['filetype']."");
+     // /usr/bin/exiftool -IFD0:Orientation -b 1.jpg     -a is to get dupe tags, too
+     $exif = system("/usr/bin/exiftool -IFD0:Orientation -b -a ".$savepath.$filename.".".$arraycontent['filetype']."");
      settype($exif, "integer");
      logfile("EXIF ist auf $exif");
      $arraycontent['exifkey'] = $exif; //for editsummary
 
      if ($arraycontent['degree'] == "RESETEXIF") {   // if ignoring EXIF is wished ...
-	switch($exif) {
-		case 0:  // no Orientation tag existent
-		case 1:
-			logfile("reset EXIF Orientation reset requested but it was already 0 or 1");
-			$return=1007; // unexpected EXIF was found
-		break;
-		default:
-			$exifR = 0; // ignore any existing EXIF
-	}
+        switch($exif) {
+                case 0:  // no Orientation tag existent
+                case 1:
+                        logfile("reset EXIF Orientation reset requested but it was already 0 or 1");
+                        $return=1007; // unexpected EXIF was found
+                break;
+                default:
+                        $exifR = 0; // ignore any existing EXIF
+        }
 
      } else {
-	if ($exif >= 10) {  //do we have duplicate Orientation tags?  They get reported by exiftool like "18".
-		logfile("duplicate Orientation tags!");
-		$return=1009; // Duplicate Orientation tags were found	
-	} else {
-		//Use EXIF Orientation (=  roation applied by MediaWiki for displaying) and user input to find the correct rotation
-		switch($exif) {
-			case 0:  // no Orientation tag existent
-			case 1:
-				if ($arraycontent['degree'] == 0) { // No rotation requested AND exif normal?
-					logfile("exif was 0 or 1 and no rotation requested");
-					$return=1008; // 
-				} else {
-					$exifR = 0;
-				}
-			break;
-			case 3:
-				$exifR = 180;  
-			break;
-			case 6:
-				$exifR = 90;   
-			break;
-			case 8:
-				$exifR = 270;
-			break;
-			default:
-				logfile("exif was not 0,1,3,6,8");
-				$return=1003; // unexpected EXIF was found
-		}
-	}
+        if ($exif >= 10) {  //do we have duplicate Orientation tags?  They get reported by exiftool like "18".
+                logfile("duplicate Orientation tags!");
+                $return=1009; // Duplicate Orientation tags were found
+        } else {
+                //Use EXIF Orientation (=  roation applied by MediaWiki for displaying) and user input to find the correct rotation
+                switch($exif) {
+                        case 0:  // no Orientation tag existent
+                        case 1:
+                                if ($arraycontent['degree'] == 0) { // No rotation requested AND exif normal?
+                                        logfile("exif was 0 or 1 and no rotation requested");
+                                        $return=1008; //
+                                } else {
+                                        $exifR = 0;
+                                }
+                        break;
+                        case 3:
+                                $exifR = 180;
+                        break;
+                        case 6:
+                                $exifR = 90;
+                        break;
+                        case 8:
+                                $exifR = 270;
+                        break;
+                        default:
+                                logfile("exif was not 0,1,3,6,8");
+                                $return=1003; // unexpected EXIF was found
+                }
+        }
     }
 
     if ($return == 0) { // if no unexpected EXIF was found
-        
-	if ($arraycontent['degree'] == "RESETEXIF") {   // if ignoring EXIF is wished ...
-		$realrotate = 0; // do not rotate
-		$arraycontent['realdegree'] = 0;  //    for editsummary
-	} else {
-		$realrotate = $arraycontent['degree'] + $exifR;  // Saibo2 formula. user specified rotaation + already applied rotation by MW
-		logfile("Bild muss um $realrotate Grad gedreht werden.");
-		$realrotate = (360 + ($realrotate % 360)) % 360;    // convert to 0-259
-		$arraycontent['realdegree'] = $realrotate;  //    for editsummary
+
+        if ($arraycontent['degree'] == "RESETEXIF") {   // if ignoring EXIF is wished ...
+                $realrotate = 0; // do not rotate
+                $arraycontent['realdegree'] = 0;  //    for editsummary
+        } else {
+                $realrotate = $arraycontent['degree'] + $exifR;  // Saibo2 formula. user specified rotaation + already applied rotation by MW
+                logfile("Bild muss um $realrotate Grad gedreht werden.");
+                $realrotate = (360 + ($realrotate % 360)) % 360;    // convert to 0-259
+                $arraycontent['realdegree'] = $realrotate;  //    for editsummary
         }
             switch($realrotate)
             {
                 case 0:
-                    //kopie erstellen      
+                    //kopie erstellen
                     logfile("just exif correction, picture correct");
                     $cmd = "cp ".$savepath.$filename.".".$arraycontent['filetype']." ".$savepath.$filename."_2.".$arraycontent['filetype'];
                     logfile($cmd);
                     passthru($cmd);
-                    break;        
+                    break;
                 case 90:
                 case 180:
                 case 270:
@@ -462,98 +461,98 @@ foreach($catcontent as $filename => $arraycontent)
                     passthru($cmd,$return);
                     logfile($arraycontent['title']." rotated by ".$realrotate."°.");
                     break;
-        
+
                 default:
                     logfile("Bullshit happend: realrotate was $realrotate.");
                     $return=1004;
             }
-        
+
 //escape shell nicht notwendig, keine Benutzerdaten im cmd verwendet
 
-	$doBruteForceClean = false; // init
-        
+        $doBruteForceClean = false; // init
+
         if ($return == 0 && !($exif == 0 || $exif == 1)) { // only if no error occured and change necessary
             //EXIF-orient-tag auf 1 stellen, nur bei jpeg
-            // /home/luxo/rotbot/exiftool/exiftool -Orientation=1 -n  1.jpg
-		if ($exif >= 10) {  //dupe Orientation tags?   Kill 'em all!
-					// Needs to be removed because otherwise the duplicate tag stays
-			// first attempt
-			$cmd = "/home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation= -n  ".$savepath.$filename."_2.".$arraycontent['filetype'];
-			logfile($cmd);
-			passthru($cmd,$retexifwrite);
-	
-			if ($retexifwrite == 0) {  // if successful
-				logfile("No errors on EXIF-to-0");
-				$exifwriteerr = ""; // clear - no error since it worked in first attempt
-			} else {
-				// second attempt (ignoring minor errors)
-				$cmd = "/home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation= -n -m  ".$savepath.$filename."_2.".$arraycontent['filetype'];
-				logfile($cmd);
-				passthru($cmd,$retexifwrite);
+            // /usr/bin/exiftool -Orientation=1 -n  1.jpg
+                if ($exif >= 10) {  //dupe Orientation tags?   Kill 'em all!
+                                        // Needs to be removed because otherwise the duplicate tag stays
+                        // first attempt
+                        $cmd = "/usr/bin/exiftool -IFD0:Orientation= -n  ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                        logfile($cmd);
+                        passthru($cmd,$retexifwrite);
 
-				if ($retexifwrite == 0) {  // if successful
-					logfile("No errors on EXIF-to-0 (second try)");
-					$exifwriteerr = " - EXIF had minor errors. Some EXIF could be lost. - "; 
-				} else {
-					$doBruteForceClean = true;
-				}
-			}
-		} else {
-			// first attempt
-			$cmd = "/home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation=1 -n  ".$savepath.$filename."_2.".$arraycontent['filetype'];
-			logfile($cmd);
-			passthru($cmd,$retexifwrite);
-	
-			if ($retexifwrite == 0) {  // if successful
-				logfile("no errors when setting EXIF to 1");
-				$exifwriteerr = ""; // clear - no error since it worked in first attempt
-			} else {
-				// second attempt (ignoring minor errors)
-				$cmd = "/home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation=1 -n -m  ".$savepath.$filename."_2.".$arraycontent['filetype'];
-				logfile($cmd);
-				passthru($cmd,$retexifwrite);
-				
-				if ($retexifwrite == 0) {  // if successful
-					logfile("no errors when setting EXIF to 1 (second try)");
-					$exifwriteerr = " - EXIF had minor errors. Some EXIF could be lost. - "; 
-				} else {
-					$doBruteForceClean = true;
-				}
-			}
-		}
+                        if ($retexifwrite == 0) {  // if successful
+                                logfile("No errors on EXIF-to-0");
+                                $exifwriteerr = ""; // clear - no error since it worked in first attempt
+                        } else {
+                                // second attempt (ignoring minor errors)
+                                $cmd = "/usr/bin/exiftool -IFD0:Orientation= -n -m  ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                                logfile($cmd);
+                                passthru($cmd,$retexifwrite);
 
+                                if ($retexifwrite == 0) {  // if successful
+                                        logfile("No errors on EXIF-to-0 (second try)");
+                                        $exifwriteerr = " - EXIF had minor errors. Some EXIF could be lost. - ";
+                                } else {
+                                        $doBruteForceClean = true;
+                                }
+                        }
+                } else {
+                        // first attempt
+                        $cmd = "/usr/bin/exiftool -IFD0:Orientation=1 -n  ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                        logfile($cmd);
+                        passthru($cmd,$retexifwrite);
 
-		if ($doBruteForceClean) {
-			// third attempt (ignoring nearly all errors)  - copy all readable tags but leave the Orientation tag away
-			$cmd = "/home/luxo/rotbot/exiftool/exiftool -all= -tagsfromfile @ -all:all --IFD0:Orientation ".$savepath.$filename."_2.".$arraycontent['filetype'];
-			logfile($cmd);
-			passthru($cmd,$retexifwrite);
+                        if ($retexifwrite == 0) {  // if successful
+                                logfile("no errors when setting EXIF to 1");
+                                $exifwriteerr = ""; // clear - no error since it worked in first attempt
+                        } else {
+                                // second attempt (ignoring minor errors)
+                                $cmd = "/usr/bin/exiftool -IFD0:Orientation=1 -n -m  ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                                logfile($cmd);
+                                passthru($cmd,$retexifwrite);
 
-			if ($retexifwrite == 0) {  // if successful
-				logfile("no errors when setting EXIF to 0 (third try)");
-				$exifwriteerr = " - EXIF had major errors. Great parts of EXIF could be lost. - "; 
-			} else {
-				// complete failure
-				$return = 1005;
-			}
-		}
+                                if ($retexifwrite == 0) {  // if successful
+                                        logfile("no errors when setting EXIF to 1 (second try)");
+                                        $exifwriteerr = " - EXIF had minor errors. Some EXIF could be lost. - ";
+                                } else {
+                                        $doBruteForceClean = true;
+                                }
+                        }
+                }
 
 
-		$arraycontent['exifwriteerr'] = $exifwriteerr; //for editsummary
+                if ($doBruteForceClean) {
+                        // third attempt (ignoring nearly all errors)  - copy all readable tags but leave the Orientation tag away
+                        $cmd = "/usr/bin/exiftool -all= -tagsfromfile @ -all:all --IFD0:Orientation ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                        logfile($cmd);
+                        passthru($cmd,$retexifwrite);
+
+                        if ($retexifwrite == 0) {  // if successful
+                                logfile("no errors when setting EXIF to 0 (third try)");
+                                $exifwriteerr = " - EXIF had major errors. Great parts of EXIF could be lost. - ";
+                        } else {
+                                // complete failure
+                                $return = 1005;
+                        }
+                }
+
+
+                $arraycontent['exifwriteerr'] = $exifwriteerr; //for editsummary
         }
 
-        if ($return == 0) { // only if no error occured 
-		//Exif auslesen als Test
-		// /home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation -b 1.jpg    -a is to get dupe tags, too
-		$exifafter = system("/home/luxo/rotbot/exiftool/exiftool -IFD0:Orientation -b -a ".$savepath.$filename."_2.".$arraycontent['filetype']."");
-		settype($exifafter, "integer");
-		logfile("read EXIF after finish: $exifafter");
-		$arraycontent['exifkeyafter'] = $exifafter; //for editsummary
-	
-		if (!($exifafter == 0 || $exifafter == 1)) {  // if unsuccessful
-			$return = 1006;
-		}
-	}
+        if ($return == 0) { // only if no error occured
+                //Exif auslesen als Test
+                // /usr/bin/exiftool -IFD0:Orientation -b 1.jpg    -a is to get dupe tags, too
+                $exifafter = system("/usr/bin/exiftool -IFD0:Orientation -b -a ".$savepath.$filename."_2.".$arraycontent['filetype']."");
+                settype($exifafter, "integer");
+                logfile("read EXIF after finish: $exifafter");
+                $arraycontent['exifkeyafter'] = $exifafter; //for editsummary
+
+                if (!($exifafter == 0 || $exifafter == 1)) {  // if unsuccessful
+                        $return = 1006;
+                }
+        }
     }
   }
   else //Für png's und gif's
@@ -562,16 +561,16 @@ foreach($catcontent as $filename => $arraycontent)
     logfile($arraycontent['title']." rotated by ".$arraycontent['degree']."°: ".$returnP);
   }
   // TODO:  ich bau mal ne Verwendung von $returnP in der Fehlerbehandlung nachfolgend ein..  der Fehlerwert beim PNG/GIF-Drehen wird gar nicht verwendet
-  
-  
+
+
 //  sleep(5); //wait 5 sec. between rotating images
-  
+
   if($return != 0)
   {
     //Bild aussortieren, da defekt
- 
+
     $rx = "";
-    switch($return) { 
+    switch($return) {
         case 1:
           $rx = " (DCT coefficient out of range)";
           $wrongfiles[$arraycontent["title"]] = "corrupt JPEG file.".$rx;
@@ -633,72 +632,72 @@ include("login.php");
 
 
 foreach($catcontent2 as $filename => $arraycontent)
-	{
-	
-	//upload summary
+        {
 
-	if ($arraycontent['degree'] == "RESETEXIF") {
-		$filesum = sprintf($config['resetuploadsummary']." ".$config['exifuploadsum'],$arraycontent['exifkey'],$arraycontent['exifkeyafter'],$arraycontent['exifwriteerr'],$arraycontent['realdegree']);	
-	} else {
+        //upload summary
 
-		if (!($arraycontent['exifkey'] == 0 || $arraycontent['exifkey'] == 1)) {  // if EXIF was not 0 or 1
-			$filesum = sprintf($config['uploadsummary']." ".$config['exifuploadsum'],$arraycontent['degree'],$arraycontent['exifkey'],$arraycontent['exifkeyafter'],$arraycontent['exifwriteerr'],$arraycontent['realdegree']);
-		} else {
-			$filesum = sprintf($config['uploadsummary'],$arraycontent['degree']);
-		}
-	}
-	
-	//Hochladen
-	Logfile("upload ".$arraycontent['title']." ... intern name: ".$filename."_2.".$arraycontent['filetype']);
-	wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
-	Logfile($arraycontent['title']." uploaded!");
-	$catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
-	//Quelltext laden
-	$quelltext = file_get_contents("http://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
-	
-	//Template erkennen
-	$strabtemp = NULL;
-	$strabtemp = stristr($quelltext, "{{Rotate");
-	if(!$strabtemp) { $strabtemp = stristr($quelltext, "{{Template:Rotate"); }
-	$upto = strpos($strabtemp,"}}");
-	$template = substr($strabtemp,0,$upto+2);
-	
-	//löschen
-	$forupload = str_ireplace($template."\n", "", $quelltext, $count); // delete template and a newline directly afterwards
-	$forupload = str_ireplace($template, "", $forupload, $count2); // delete template
-	
-	//Speichern
-	if($count + $count2 > 0)
-	{
-	logfile("remove template $template");
-	
-	//Editsummary generieren
-	if($arraycontent['degree'] == "RESETEXIF") {
-	  $edsum = $config['reseteditsummary'];
-	
-	} else {
-	  $edsum = sprintf($config['editsummary'],$arraycontent['degree']);
-  }  
-	
-	$c = wikiedit("commons.wikimedia.org",$arraycontent['title'],$forupload,$edsum,"1");
-	
-	if($c == true)
-	{
-	 $nodelete[$arraycontent['title']] = 0; 
-	}
-	else
-	{
-	 $nodelete[$arraycontent['title']] = 1;
-	}
-	
-	}
-	else
-	{
-	logfile("ERROR: TEMPLATE NICHT GEFUNDEN!");
-	$nodelete[$arraycontent['title']] = 1;
-	}
-	logfile("\n-------NEXT--------- \n");
-//	sleep(5);
+        if ($arraycontent['degree'] == "RESETEXIF") {
+                $filesum = sprintf($config['resetuploadsummary']." ".$config['exifuploadsum'],$arraycontent['exifkey'],$arraycontent['exifkeyafter'],$arraycontent['exifwriteerr'],$arraycontent['realdegree']);
+        } else {
+
+                if (!($arraycontent['exifkey'] == 0 || $arraycontent['exifkey'] == 1)) {  // if EXIF was not 0 or 1
+                        $filesum = sprintf($config['uploadsummary']." ".$config['exifuploadsum'],$arraycontent['degree'],$arraycontent['exifkey'],$arraycontent['exifkeyafter'],$arraycontent['exifwriteerr'],$arraycontent['realdegree']);
+                } else {
+                        $filesum = sprintf($config['uploadsummary'],$arraycontent['degree']);
+                }
+        }
+
+        //Hochladen
+        Logfile("upload ".$arraycontent['title']." ... intern name: ".$filename."_2.".$arraycontent['filetype']);
+        wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
+        Logfile($arraycontent['title']." uploaded!");
+        $catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
+        //Quelltext laden
+        $quelltext = file_get_contents("http://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
+
+        //Template erkennen
+        $strabtemp = NULL;
+        $strabtemp = stristr($quelltext, "{{Rotate");
+        if(!$strabtemp) { $strabtemp = stristr($quelltext, "{{Template:Rotate"); }
+        $upto = strpos($strabtemp,"}}");
+        $template = substr($strabtemp,0,$upto+2);
+
+        //löschen
+        $forupload = str_ireplace($template."\n", "", $quelltext, $count); // delete template and a newline directly afterwards
+        $forupload = str_ireplace($template, "", $forupload, $count2); // delete template
+
+        //Speichern
+        if($count + $count2 > 0)
+        {
+        logfile("remove template $template");
+
+        //Editsummary generieren
+        if($arraycontent['degree'] == "RESETEXIF") {
+          $edsum = $config['reseteditsummary'];
+
+        } else {
+          $edsum = sprintf($config['editsummary'],$arraycontent['degree']);
+  }
+
+        $c = wikiedit("commons.wikimedia.org",$arraycontent['title'],$forupload,$edsum,"1");
+
+        if($c == true)
+        {
+         $nodelete[$arraycontent['title']] = 0;
+        }
+        else
+        {
+         $nodelete[$arraycontent['title']] = 1;
+        }
+
+        }
+        else
+        {
+        logfile("ERROR: TEMPLATE NICHT GEFUNDEN!");
+        $nodelete[$arraycontent['title']] = 1;
+        }
+        logfile("\n-------NEXT--------- \n");
+//      sleep(5);
 }
 logfile("Upload finished. Do error pictures now.");
 
@@ -710,29 +709,29 @@ logfile("Upload finished. Do error pictures now.");
 //Cache leeren
 foreach($catcontent2 as $filename => $arraycontent)
 {
-unlink("/home/luxo/rotbot/cache/".$filename.".".$arraycontent['filetype']);
-unlink("/home/luxo/rotbot/cache/".$filename."_2.".$arraycontent['filetype']);
-unlink("/home/luxo/rotbot/cache/".$filename."_2.".$arraycontent['filetype']."_original");
+unlink("/data/project/sbot/Rotatebot/cache/".$filename.".".$arraycontent['filetype']);
+unlink("/data/project/sbot/Rotatebot/cache/".$filename."_2.".$arraycontent['filetype']);
+unlink("/data/project/sbot/Rotatebot/cache/".$filename."_2.".$arraycontent['filetype']."_original");
 }
 logfile("cache cleared. Write log now.");
 
 //##################### LOG LOG LOG LOG LOG LOG LOG #########################
 
-$logfilew = file_get_contents("http://commons.wikimedia.org/w/index.php?title=User:Rotatebot/Log&action=raw");
+$logfilew = file_get_contents("http://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/Rotatebot&action=raw");
 $somanyrot = count($catcontent2);
 
 $logfilew = deleteold($logfilew,$somanyrot,$config['logfilesize'],$config['logheader']);
 
-// Fehlerbilder durchgehen 
+// Fehlerbilder durchgehen
 foreach($wrongfiles as $title => $reason)
 {
-  
 
-  
+
+
   $quelltext = file_get_contents("http://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$title))."&action=raw");
-  
+
   $forupload = str_ireplace("{{Rotate", "{{Rotate|nobot=true|reason='''Reason''': $reason", $quelltext, $count);
-  
+
   if($addrename[$title] == true && !stristr($forupload,"{{rename"))
   {
     $renametemp = "{{Rename}}\n";
@@ -741,7 +740,7 @@ foreach($wrongfiles as $title => $reason)
   {
     $renametemp = "";
   }
-  
+
   $forupload = $renametemp.$forupload;
   if($count > 0)
   {
@@ -749,7 +748,7 @@ foreach($wrongfiles as $title => $reason)
     wikiedit("commons.wikimedia.org",str_replace(" ", "_",$title),$forupload,"Bot: Can't rotate image","1");
     $logfilew .= "\n----\n
     <span style=\"color:red;text-decoration:blink\">'''Error'''</span> can't rotate [[:$title]]:\n ''$reason''\n";
-    
+
     logfile("set template of $title to nobot");
   }
   else
@@ -757,7 +756,7 @@ foreach($wrongfiles as $title => $reason)
     logfile("Template:Rotate in $title NOT FOUND!");
     $logfilew .= "\n----\n
     <span style=\"color:red;text-decoration:blink\">'''Error'''</span> can't rotate [[:$title]]:\n ''$reason''\n";
-    $logfilew .= "<big style='color:red;text-decoration:blink;'>'''Warning:''' Template not found, file probably still in the category!!</big>\n";
+    $logfilew .= "<p>'''Warning(?):'''Template not found, file probably still in the category!!</p>\n";
   }
 
 }
@@ -770,20 +769,20 @@ foreach($catcontent2 as $arraycontent)
   $logfilew .= "\n----\n";
   $logfilew .= "[[".$arraycontent['title']."|thumb]]\n";
   $logfilew .= "*[[:".$arraycontent['title']."]] (".$arraycontent['size'].")\n";
-  
+
   if($nodelete[$arraycontent['title']] == 1)
   {
-  
-    $logfilew .= "<big style='color:red;text-decoration:blink;'>'''Warning:''' Template not found, file probably still in the category!!</big>\n";
-  
+
+    $logfilew .= "<p>Template not found, file probably still in the category!</p>\n";
+
   }
-  
-  
+
+
   if($arraycontent['metadata']['Make'] and $arraycontent['metadata']['DateTimeDigitized'])
   {
     $logfilew .= "**Image taken with a [[:en:".trim($arraycontent['metadata']['Make'])."|".ucwords(strtolower(trim($arraycontent['metadata']['Make'])))."]] ".ucwords(strtolower(trim($arraycontent['metadata']['Model'])))." at ".trim($arraycontent['metadata']['DateTimeDigitized']).".\n";
   }
-  
+
   $logfilew .= "**Last image-version uploaded by [[User:".$arraycontent['uploader']."|]] at ".timestampto($arraycontent['upltime'])." (UTC)\n";
   if($arraycontent['tmplsetter'])
   {
@@ -797,13 +796,13 @@ foreach($catcontent2 as $arraycontent)
 if($somanyrot > 0 OR count($wrongfiles) > 0)
 {
   logfile("write logfile. ($somanyrot pictures)");
-  
+
   if(count($wrongfiles) > 0)
   {
     $msgerr = ", ".count($wrongfiles)." errors";
   }
-  
-  wikiedit("commons.wikimedia.org","User:Rotatebot/Log",$logfilew,"Bot: $somanyrot images rotated".$msgerr.".","1");
+
+  wikiedit("commons.wikimedia.org","User:SteinsplitterBot/Rotatebot",$logfilew,"Bot: $somanyrot images rotated".$msgerr.".","1");
 }
 
 mysql_close($myslink); // TODO should/can this be moved to function suicide? - Probably not due to line 33.
@@ -860,7 +859,7 @@ return tellSeconds($diff);
 
 }
 
-function tellSeconds($NumberOfSeconds) // function Copyright (C) simplecontent.net 
+function tellSeconds($NumberOfSeconds) // function Copyright (C) simplecontent.net
 {
 
     $time_map = array(
@@ -932,15 +931,15 @@ logfile("nothing to delete, just add");
 return $content;
 
 //COUNTER
-$counter = file_get_contents("/home/luxo/rotbot/counter.txt");
+$counter = file_get_contents("/data/project/sbot/Rotatebot/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/home/luxo/rotbot/counter.txt",$counter);
+file_put_contents("/data/project/sbot/Rotatebot/counter.txt",$counter);
 }
 else
 {
 //alte löschen
 $zuviele = $totneu - $maxonlog ;
-            
+
 
 if($zuviele > $alte) //nicht mehr löschen als da sind.
 {
@@ -960,9 +959,9 @@ logfile("delete section 1 to $bereich");
 $intro = substr($content,0,$abschnittarray['1']);
 
 //COUNTER
-$counter = file_get_contents("/home/luxo/rotbot/counter.txt");
+$counter = file_get_contents("/data/project/sbot/Rotatebot/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/home/luxo/rotbot/counter.txt",$counter);
+file_put_contents("/data/project/sbot/Rotatebot/counter.txt",$counter);
 logfile("new counter: $counter.");
 
 $intro = sprintf($logheader."\n",$abschnitteneu,$counter); //NEU in settings definiert: der header vom Log
@@ -977,38 +976,38 @@ return $intro.$rest;
 
 function botsetup()
 {
-  $setupraw = file("http://commons.wikimedia.org/w/index.php?title=User:Rotatebot/config.js&action=raw");
-  
+  $setupraw = file("http://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/rconfig.js&action=raw");
+
   foreach($setupraw as $line)
   {
     $line = trim($line);
-    
+
     if(substr($line,0,2) != "//" AND $line != "")
     {
-      
+
       $gleich = strpos($line, "=");
-      
+
       $namecon = trim(substr($line,3,$gleich-3));
-      
+
       $stripu = strpos($line,";");
-      
+
       $content = trim(substr($line,$gleich+1,$stripu - ($gleich + 1)));
-      
+
       //falls vorhanden "" entfernen
       if(substr($content, 0, 1) == '"')
       {
         $content = substr($content, 1);
       }
-      
+
       if(substr($content, -1) == '"')
       {
         $content = substr($content, 0, -1);
       }
-      
+
       $content = trim($content);
-      
+
       $array[$namecon] = $content;
-      
+
     }
   }
   return $array;
@@ -1038,49 +1037,49 @@ function hexToStr($hex)
 
 
 //checks for other concurrently running rotatebot instances. Exits if not alone on the world
-//Params: 
+//Params:
 //        global $myLockfile - String containing a filename to be touched
 //        $dontDieOnLockProblems - Boolean for overriding death
-function getLockOrDie($dontDieOnLockProblems) { 
-	global $myLockfile;
+function getLockOrDie($dontDieOnLockProblems) {
+        global $myLockfile;
 
-	if (!file_exists($myLockfile)) {
-		system("touch ".$myLockfile);
-			if (!file_exists($myLockfile)) {
-				if ($dontDieOnLockProblems) {
-					logfile("Could not create lock file. DontDieMode prevents death.");
-				} else {
-					die("Could not create lock file. Exit.");
-				}
-			}
-	} else {
-		if ($dontDieOnLockProblems) {
-			logfile("Could not get lock. Lock file already present. DontDieMode prevents death.");
-		} else {
-			die("Could not get lock. Lock file already present. Exit.");
-		}
-	}
+        if (!file_exists($myLockfile)) {
+                system("touch ".$myLockfile);
+                        if (!file_exists($myLockfile)) {
+                                if ($dontDieOnLockProblems) {
+                                        logfile("Could not create lock file. DontDieMode prevents death.");
+                                } else {
+                                        die("Could not create lock file. Exit.");
+                                }
+                        }
+        } else {
+                if ($dontDieOnLockProblems) {
+                        logfile("Could not get lock. Lock file already present. DontDieMode prevents death.");
+                } else {
+                        die("Could not get lock. Lock file already present. Exit.");
+                }
+        }
 }
 
 // tries to remove the lockfile. Logs any errors.
 //Params: global $myLockfile  - String containing a filename to be removed
 function removeLock() {
-	global $myLockfile;
+        global $myLockfile;
 
-	if (file_exists($myLockfile)) {
-		system("rm ".$myLockfile);
-		if (file_exists($myLockfile)) {
-			logfile("Warning: for some reason the lockfile could not be removed.");
-		}
-	} else {
-		logfile("Warning: for some reason the lockfile was missing although it was expected to exist.");
-	}
+        if (file_exists($myLockfile)) {
+                system("rm ".$myLockfile);
+                if (file_exists($myLockfile)) {
+                        logfile("Warning: for some reason the lockfile could not be removed.");
+                }
+        } else {
+                logfile("Warning: for some reason the lockfile was missing although it was expected to exist.");
+        }
 }
 
 // gracefully commits sucide. Removes the lock file before...
 function suicide ($exitcodeOrString) {
-	removeLock();
-	die($exitcodeOrString);
+        removeLock();
+        die($exitcodeOrString);
 }
 
 ?>
