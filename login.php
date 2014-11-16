@@ -15,7 +15,7 @@
 
     You should have received a copy of the GNU General Public License
     along with Luxobot.  If not, see <http://www.gnu.org/licenses/>.
-    
+
     */
 
 
@@ -26,14 +26,14 @@ function wikiedit($project,$page,$newtext,$description,$minor)
 global $cookies;
   logfile("Funktion gestartet...");
   logfile("Schreibe Text am ".date("r",time())." in die Seite '$page'.");
-  
-  $useragent = "Luxo (toolserver; php) luxo@ts.wikimedia.org";
-  
+
+  $useragent = "Steinsplitter (wmflabs; php) steinsplitter@wikipedia.de";
+
 //$cookies
 if(!$cookies["commonswikiUserName"] OR !$cookies["commonswikiUserID"])
 {
-  $username = "Rotatebot";
-  $password = "**removed**";
+  $username = "SteinspitterBot";
+  $password = "PASSWD";
   logfile("Login to $project!\n");
   wikilogin($username,$password,$project,$useragent);
   logfile("logged in to $project!\n");
@@ -45,12 +45,12 @@ else
 }
 
 
-  
+
 
 //echo $header."\n\n";
 
 // Response Body auslesen
-/*while (!feof($fp)) { 
+/*while (!feof($fp)) {
 $linew=fgets($fp,255);
 $bodyw.=$linew;
 }
@@ -69,12 +69,12 @@ fputs($fpb, "User-Agent: $useragent\n");
 fputs($fpb, "Accept: $accept\n");
 fputs($fpb, "Accept-Language: de\n");
 
-foreach ($cookies as $key=>$value) 
+foreach ($cookies as $key=>$value)
 {
   $cookie .= trim($value).";";
 }
 $cookie = substr($cookie,0,-1);
-	
+
 
 
 logfile("Lade Seite; Cookies: $cookie\n");
@@ -102,7 +102,7 @@ $cookies[$cookiename] = $rawcookie;
 
 //cookie-header erneut generieren
 $cookie = "";
-foreach ($cookies as $key=>$value) 
+foreach ($cookies as $key=>$value)
 {
   $cookie .= trim($value).";";
 }
@@ -113,7 +113,7 @@ logfile("Neue Cookies: $cookie\n");
 
 //echo $headerrx."\n\n";
 // Response Body auslesen**********************
-while (!feof($fpb)) { 
+while (!feof($fpb)) {
 $line=fgets($fpb,255);
 $bodyy.=$line;
 //Die verschiedenen form-data's auslesen
@@ -137,14 +137,18 @@ if(strstr($line, "wpAutoSummary"))
 {
 $formdata['wpAutoSummary'] = $line;
 }
+if(strstr($line, "wpUltimateParam"))
+{
+$formdata['wpUltimateParam'] = $line;
+}
 if(strstr($line, "wpSave"))
 {
 $formdata['wpSave'] = $line;
 }
 }
-logfile("Seite geladen, Anmeldung prüfen.");
+logfile("Seite geladen, Anmeldung prueffen.");
 
-if(strstr($bodyy,'"wgUserName":"Rotatebot",'))
+if(strstr($bodyy,'"wgUserName":"SteinsplitterBot",'))
 {
 logfile("Anmeldung erfolgreich!");
 
@@ -167,7 +171,7 @@ $formdata["$type"] = $t1;
 // ########################### POST-CONTENT VORBEREITEN #####################
 
 //content vorbereiten
-$content = "wpSection=&wpStarttime=".urlencode($formdata['wpStarttime'])."&wpEdittime=".urlencode($formdata['wpEdittime'])."&wpScrolltop=".urlencode($formdata['wpScrolltop'])."&wpTextbox1=".urlencode($newtext)."&wpSummary=".urlencode($description)."&wpMinoredit=".urlencode($minor)."&wpWatchthis=1&wpSave=".$formdata['wpSave']."&wpEditToken=".urlencode($formdata['wpEditToken'])."&wpAutoSummary=".urlencode($formdata['wpAutoSummary']);
+$content = "wpSection=&wpStarttime=".urlencode($formdata['wpStarttime'])."&wpEdittime=".urlencode($formdata['wpEdittime'])."&wpScrolltop=".urlencode($formdata['wpScrolltop'])."&wpTextbox1=".urlencode($newtext)."&wpSummary=".urlencode($description)."&wpMinoredit=".urlencode($minor)."&wpWatchthis=1&wpSave=".$formdata['wpSave']."&wpEditToken=".urlencode($formdata['wpEditToken'])."&wpAutoSummary=".urlencode($formdata['wpAutoSummary'])."&wpUltimateParam=".urlencode($formdata['wpUltimateParam']);
 
 
 
@@ -213,7 +217,7 @@ $headerrx.=$linex;
 //auf cookie prüfen
 if(substr($linex,0,11) == "Set-Cookie:")
 {
-$rawcookie = substr($line,11,strpos($line,";")-11); //Format: session=DFJ3ASD2S
+$rawcookie = substr($linex,11,strpos($linex,";")-11); //Format: session=DFJ3ASD2S
   $cookiename = trim(substr($rawcookie,0,strpos($rawcookie,"=")));
 $cookies[$cookiename] = $rawcookie;
 }
@@ -230,7 +234,10 @@ return true;
 }
 else
 {
-logfile("BEARBEITUNG FEHLGESCHLAGEN!.\nFehler-Header: $line");
+logfile("BEARBEITUNG FEHLGESCHLAGEN!.\nFehler-Header: $linexx");
+
+//      var_dump($headerrx);
+//      suicide("");
 return false;
 }
 
@@ -238,7 +245,7 @@ return false;
 
 
 /*
-while (!feof($fpc)) { 
+while (!feof($fpc)) {
 $linew=fgets($fpc,255);
 $bodyw.=$linew;
 }
@@ -261,25 +268,25 @@ function wikilogin($username,$password,$project,$useragent)
 
   $getrequest = (substr($project,-1) == "/") ? "w/api.php?action=login" : "/w/api.php?action=login";
   $project = (substr($project,0,7) == "http://") ? $project : "http://".$project;
-  
-  logfile("Login via API to $project as $username...");  
+
+  logfile("Login via API to $project as $username...");
 
   $postlogin = "lgname=".urlencode($username)."&lgpassword=".urlencode($password)."&format=php";
- 
+
   if(!$useragent) { $useragent = "Luxo (Toolserver; php) luxo@ts.wikimedia.org";  }
   $ch = curl_init($project.$getrequest);
   curl_setopt($ch, CURLOPT_POST, TRUE);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postlogin);
   curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($ch, CURLOPT_COOKIEJAR, "/home/luxo/cks");
-  
+  curl_setopt($ch, CURLOPT_COOKIEJAR, "/data/project/sbot/Rotatebot/cks");
+
   $rx = curl_exec($ch);
 
   $data = unserialize($rx);
-  
+
   curl_close($ch);
-  
+
   if($data['login']['result'] == "NeedToken")
   {
     $postlogin = "lgname=".urlencode($username)."&lgpassword=".urlencode($password)."&lgtoken=".urlencode($data['login']['token'])."&format=php";
@@ -288,27 +295,28 @@ function wikilogin($username,$password,$project,$useragent)
     curl_setopt($ch, CURLOPT_POSTFIELDS, $postlogin);
     curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_COOKIEFILE, "/home/luxo/cks");
-    curl_setopt($ch, CURLOPT_COOKIEJAR, "/home/luxo/cks");
-    $ry = curl_exec($ch);  
+    curl_setopt($ch, CURLOPT_COOKIEFILE, "/data/project/sbot/Rotatebot/cks");
+    curl_setopt($ch, CURLOPT_COOKIEJAR, "/data/project/sbot/Rotatebot/cks");
+    $ry = curl_exec($ch);
     $data = unserialize($ry);
-    
+
   }
-  
+
   if($data['login']['result'] == "Success")
   {
     logfile("Login erfolgreich");
-    
-    //Cookie aufbauen 
+
+    //Cookie aufbauen
     $cookies = array($data['login']['cookieprefix']."_session" => $data['login']['cookieprefix']."_session=".$data['login']['sessionid'],
                      $data['login']['cookieprefix']."UserID" => $data['login']['cookieprefix']."UserID=".$data['login']['lguserid'], //   [commonswikiUserID] =>  commonswikiUserID=205395
                      $data['login']['cookieprefix']."UserName" => $data['login']['cookieprefix']."UserName=".$data['login']['lgusername'],
-                     $data['login']['cookieprefix']."Token" => $data['login']['cookieprefix']."Token=".$data['login']['lgtoken']);    
+                     $data['login']['cookieprefix']."Token" => $data['login']['cookieprefix']."Token=".$data['login']['lgtoken']);
   } else {
     suicide("Login nicht erfolgreich! (".$data['login']['result'].")");
   }
-    
+
   curl_close($ch);
+
   return $cookies;
 }
 
