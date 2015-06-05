@@ -53,7 +53,7 @@ getLockOrDie($dontDieOnLockProblems); //check for other concurrently running rot
 
 
 logfile("Verbinde zur Datenbank!");
-$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'PASSWD') or suicide ("Can't connect to MySQL");
+$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'PASSW') or suicide ("Can't connect to MySQL");
 $database = "commonswiki_p";
 mysql_select_db($database, $myslink)
                         or suicide ("Konnte $databas nicht öffnen: ".mysql_error());
@@ -65,7 +65,7 @@ $wrongfiles = array();
 $katname = "Images_requiring_rotation_by_bot";
 logfile("Prüfe 'Category:$katname' auf Bilder");
 
-$queryurl = "http://commons.wikimedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:".$katname."&format=php&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
+$queryurl = "http://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=php&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
 $rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
 $contentarray = unserialize($rawrequ);
 
@@ -107,7 +107,7 @@ foreach($contentarray['pages'] as $picture)
 }
 $urlpageids = substr($urlpageids,1); //vorderster | wieder wegnehmen (JA, unsauber ;-)
 
-$queryurl = "http://commons.wikimedia.org/w/api.php?action=query&pageids=".$urlpageids."&prop=revisions|imageinfo&format=php&iiprop=timestamp|user|url|size|metadata";
+$queryurl = "http://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=php&iiprop=timestamp|user|url|size|metadata";
 $rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
 $contentarray2 = unserialize($rawrequ);
 
@@ -196,7 +196,7 @@ foreach($picture['revisions'] as $key => $revisions)
   {
     logfile("set time($revitimestp) not identical with this rv, ".$revisions['timestamp'].".");
     //Rev's nachladen
-    $ctxctx = file_get_contents("http://commons.wikimedia.org/w/api.php?action=query&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=php") or suicide("api error");
+    $ctxctx = file_get_contents("http://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=php") or suicide("api error");
     $totrevs = unserialize($ctxctx);
     logfile("ID: ".$picture['pageid']." ");
 
