@@ -57,7 +57,7 @@ function wikiupload($project,$filename_local,$filename_wiki,$license,$desc)
 
   function gettoken($project,$cookie) {
     $url = "http://".$project."/w/api.php";
-    $post = "action=query&prop=info&intoken=edit&titles=Foo&format=php";
+    $post = "action=query&rawcontinue=1&prop=info&intoken=edit&titles=Foo&format=php";
 
     $useragent = "Luxobot/2 (wmflabs; php) steinsplitter-wiki@live.com";
     print("Get $url ... Cookies: $cookie \n");
