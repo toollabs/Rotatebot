@@ -27,7 +27,7 @@ global $cookies;
   logfile("Funktion gestartet...");
   logfile("Schreibe Text am ".date("r",time())." in die Seite '$page'.");
 
-  $useragent = "Steinsplitter (wmflabs; php) steinsplitter@wikipedia.de";
+  $useragent = "Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com";
 
 //$cookies
 if(!$cookies["commonswikiUserName"] OR !$cookies["commonswikiUserID"])
@@ -273,7 +273,7 @@ function wikilogin($username,$password,$project,$useragent)
 
   $postlogin = "lgname=".urlencode($username)."&lgpassword=".urlencode($password)."&format=php";
 
-  if(!$useragent) { $useragent = "Luxo (Toolserver; php) luxo@ts.wikimedia.org";  }
+  if(!$useragent) { $useragent = "Luxobot (wmflabs; php) steinsplitter-wiki@live.com";  }
   $ch = curl_init($project.$getrequest);
   curl_setopt($ch, CURLOPT_POST, TRUE);
   curl_setopt($ch, CURLOPT_POSTFIELDS, $postlogin);
