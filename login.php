@@ -1,5 +1,7 @@
 <?php
-/* Luxobot © Luxo 2007
+/*   Luxobot © Luxo 2007
+
+    Minor modifications and fixes by Steinsplitter, 2014 - 2015
 
     This file is part of Luxobot.
 
@@ -18,7 +20,7 @@
 
     */
 
-
+// TO DO: Rewrite, code complety outdated and possible security vulnerabilities
 
 // ############### EDIT WIKIPEDIA - FUNCTION ###############
 function wikiedit($project,$page,$newtext,$description,$minor)
