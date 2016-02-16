@@ -22,7 +22,7 @@ $homedir = "/data/project/sbot/Rotatebot/";
 $myLockfile = $homedir."rotatebotlock";
 
 ini_set('memory_limit', '100M'); //Speicher auf 100 MBytes hochsetzen
-ini_set('user_agent', ' SteinsplitterBot by Luxo on the WMFLABS / PHP');
+ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com');
 
 
 logfile("Starte Bot!");
