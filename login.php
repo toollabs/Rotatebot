@@ -34,8 +34,7 @@ global $cookies;
 //$cookies
 if(!$cookies["commonswikiUserName"] OR !$cookies["commonswikiUserID"])
 {
-  $username = "SteinspitterBot";
-  $password = "PASSWD";
+  include "ac.php";
   logfile("Login to $project!\n");
   wikilogin($username,$password,$project,$useragent);
   logfile("logged in to $project!\n");
