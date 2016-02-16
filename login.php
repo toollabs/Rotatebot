@@ -269,7 +269,7 @@ function wikilogin($username,$password,$project,$useragent)
   global $cookies;
 
   $getrequest = (substr($project,-1) == "/") ? "w/api.php?action=login" : "/w/api.php?action=login";
-  $project = (substr($project,0,7) == "http://") ? $project : "https://".$project;
+  $project = (substr($project,0,7) == "http://") ? $project : "http://".$project;
 
   logfile("Login via API to $project as $username...");
 
@@ -287,7 +287,6 @@ function wikilogin($username,$password,$project,$useragent)
   $rx = curl_exec($ch);
   list($headers, $data) = explode("\r\n\r\n", $rx, 2);
   $data = unserialize($data);
-
   curl_close($ch);
 
   foreach (explode("\n", $headers) as $header) {
@@ -314,22 +313,28 @@ function wikilogin($username,$password,$project,$useragent)
 
     $rx = curl_exec($ch);
     list($headers, $data) = explode("\r\n\r\n", $rx, 2);
-    var_dump($data);
-
+    $data = unserialize($data);
     curl_close($ch);
 
-    foreach (explode("\n", $headers) as $header) {
-      if (substr_compare($header, 'Set-Cookie:', 0, 11, true) === 0) {
-        $header_value = trim( explode(':', $header, 2)[1] );
-        $cookie_pair = trim( explode(';', $header_value, 2)[0] );
-        list($raw_key, $raw_value) = explode('=', $cookie_pair, 2);
-        $cookies[$raw_key] = $raw_key . '=' . $raw_value;
+    if($data['login']['result'] == "Success")
+    {
+      logfile("Login erfolgreich");
+
+      foreach (explode("\n", $headers) as $header) {
+        if (substr_compare($header, 'Set-Cookie:', 0, 11, true) === 0) {
+          $header_value = trim( explode(':', $header, 2)[1] );
+          $cookie_pair = trim( explode(';', $header_value, 2)[0] );
+          list($raw_key, $raw_value) = explode('=', $cookie_pair, 2);
+          $cookies[$raw_key] = $raw_key . '=' . $raw_value;
+        }
       }
+
+    } else {
+      suicide("Login nicht erfolgreich! (".$data['login']['result'].")");
     }
   }
 
   return $cookies;
 }
-
 
 ?>
