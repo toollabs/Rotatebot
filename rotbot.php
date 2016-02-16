@@ -1,6 +1,5 @@
 <?php
-/*  Copyright © by Luxo & Saibo, 2011
-    Minor modifications and fixes by Steinsplitter, 2014 - 2015 
+/* Copyright © by Luxo & Saibo, 2011
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,8 +14,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
-// TO DO: Rewrite, code complety outdated and possible security vulnerabilities
+
+// switching off error reporting (EVIL!)
+//error_reporting(0);
 
 $homedir = "/data/project/sbot/Rotatebot/";
 $myLockfile = $homedir."rotatebotlock";
@@ -56,7 +56,7 @@ getLockOrDie($dontDieOnLockProblems); //check for other concurrently running rot
 
 
 logfile("Verbinde zur Datenbank!");
-$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'PASSW') or suicide ("Can't connect to MySQL");
+$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'passwd') or suicide ("Can't connect to MySQL");
 $database = "commonswiki_p";
 mysql_select_db($database, $myslink)
                         or suicide ("Konnte $databas nicht öffnen: ".mysql_error());
@@ -68,7 +68,7 @@ $wrongfiles = array();
 $katname = "Images_requiring_rotation_by_bot";
 logfile("Prüfe 'Category:$katname' auf Bilder");
 
-$queryurl = "http://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=php&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
+$queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=php&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
 $rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
 $contentarray = unserialize($rawrequ);
 
@@ -110,7 +110,7 @@ foreach($contentarray['pages'] as $picture)
 }
 $urlpageids = substr($urlpageids,1); //vorderster | wieder wegnehmen (JA, unsauber ;-)
 
-$queryurl = "http://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=php&iiprop=timestamp|user|url|size|metadata";
+$queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=php&iiprop=timestamp|user|url|size|metadata";
 $rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
 $contentarray2 = unserialize($rawrequ);
 
@@ -199,7 +199,7 @@ foreach($picture['revisions'] as $key => $revisions)
   {
     logfile("set time($revitimestp) not identical with this rv, ".$revisions['timestamp'].".");
     //Rev's nachladen
-    $ctxctx = file_get_contents("http://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=php") or suicide("api error");
+    $ctxctx = file_get_contents("https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=php") or suicide("api error");
     $totrevs = unserialize($ctxctx);
     logfile("ID: ".$picture['pageid']." ");
 
@@ -656,11 +656,12 @@ foreach($catcontent2 as $filename => $arraycontent)
         Logfile($arraycontent['title']." uploaded!");
         $catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
         //Quelltext laden
-        $quelltext = file_get_contents("http://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
+        // SCHLAFEN
+        $quelltext = file_get_contents("https://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
 
         //Template erkennen
         $strabtemp = NULL;
-        $strabtemp = stristr($quelltext, "{{Rotate");
+        $strabtemp = stristr($quelltext, "{{rotate");
         if(!$strabtemp) { $strabtemp = stristr($quelltext, "{{Template:Rotate"); }
         $upto = strpos($strabtemp,"}}");
         $template = substr($strabtemp,0,$upto+2);
@@ -700,7 +701,6 @@ foreach($catcontent2 as $filename => $arraycontent)
         $nodelete[$arraycontent['title']] = 1;
         }
         logfile("\n-------NEXT--------- \n");
-//      sleep(5);
 }
 logfile("Upload finished. Do error pictures now.");
 
@@ -720,7 +720,7 @@ logfile("cache cleared. Write log now.");
 
 //##################### LOG LOG LOG LOG LOG LOG LOG #########################
 
-$logfilew = file_get_contents("http://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/Rotatebot&action=raw");
+$logfilew = file_get_contents("https://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/Rotatebot&action=raw");
 $somanyrot = count($catcontent2);
 
 $logfilew = deleteold($logfilew,$somanyrot,$config['logfilesize'],$config['logheader']);
@@ -731,13 +731,13 @@ foreach($wrongfiles as $title => $reason)
 
 
 
-  $quelltext = file_get_contents("http://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$title))."&action=raw");
+  $quelltext = file_get_contents("https://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$title))."&action=raw");
 
-  $forupload = str_ireplace("{{Rotate", "{{Rotate|nobot=true|reason='''Reason''': $reason", $quelltext, $count);
+  $forupload = str_ireplace("{{rotate", "{{rotate|nobot=true|reason='''Reason''': $reason", $quelltext, $count);
 
   if($addrename[$title] == true && !stristr($forupload,"{{rename"))
   {
-    $renametemp = "{{Rename}}\n";
+    $renametemp = "{{rename}}\n";
   }
   else
   {
@@ -770,7 +770,7 @@ foreach($wrongfiles as $title => $reason)
 foreach($catcontent2 as $arraycontent)
 {
   $logfilew .= "\n----\n";
-  $logfilew .= "[[".$arraycontent['title']."|thumb]]\n";
+  $logfilew .= "[[".$arraycontent['title']."|thumb|110px]]\n";
   $logfilew .= "*[[:".$arraycontent['title']."]] (".$arraycontent['size'].")\n";
 
   if($nodelete[$arraycontent['title']] == 1)
@@ -979,7 +979,7 @@ return $intro.$rest;
 
 function botsetup()
 {
-  $setupraw = file("http://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/rconfig.js&action=raw");
+  $setupraw = file("https://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/rconfig.js&action=raw");
 
   foreach($setupraw as $line)
   {
