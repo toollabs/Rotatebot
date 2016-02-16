@@ -282,12 +282,21 @@ function wikilogin($username,$password,$project,$useragent)
   curl_setopt($ch, CURLOPT_USERAGENT, $useragent);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
   curl_setopt($ch, CURLOPT_COOKIEJAR, "/data/project/sbot/Rotatebot/cks");
+  curl_setopt($ch, CURLOPT_HEADER, true);
 
   $rx = curl_exec($ch);
-
-  $data = unserialize($rx);
-
+  list($headers, $data) = explode("\r\n\r\n", $rx, 2);
+  $data = unserialize($data);
   curl_close($ch);
+
+  foreach (explode("\n", $headers) as $header) {
+    if (substr_compare($header, 'Set-Cookie:', 0, 11, true) === 0) {
+      $header_value = trim( explode(':', $header, 2)[1] );
+      $cookie_pair = trim( explode(';', $header_value, 2)[0] );
+      list($raw_key, $raw_value) = explode('=', $cookie_pair, 2);
+      $cookies[$raw_key] = $raw_key . '=' . $raw_value;
+    }
+  }
 
   if($data['login']['result'] == "NeedToken")
   {
@@ -299,29 +308,33 @@ function wikilogin($username,$password,$project,$useragent)
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_COOKIEFILE, "/data/project/sbot/Rotatebot/cks");
     curl_setopt($ch, CURLOPT_COOKIEJAR, "/data/project/sbot/Rotatebot/cks");
-    $ry = curl_exec($ch);
-    $data = unserialize($ry);
+    curl_setopt($ch, CURLOPT_COOKIE, implode('; ', array_values($cookies)));
+    curl_setopt($ch, CURLOPT_HEADER, true);
 
+    $rx = curl_exec($ch);
+    list($headers, $data) = explode("\r\n\r\n", $rx, 2);
+    $data = unserialize($data);
+    curl_close($ch);
+
+    if($data['login']['result'] == "Success")
+    {
+      logfile("Login erfolgreich");
+
+      foreach (explode("\n", $headers) as $header) {
+        if (substr_compare($header, 'Set-Cookie:', 0, 11, true) === 0) {
+          $header_value = trim( explode(':', $header, 2)[1] );
+          $cookie_pair = trim( explode(';', $header_value, 2)[0] );
+          list($raw_key, $raw_value) = explode('=', $cookie_pair, 2);
+          $cookies[$raw_key] = $raw_key . '=' . $raw_value;
+        }
+      }
+
+    } else {
+      suicide("Login nicht erfolgreich! (".$data['login']['result'].")");
+    }
   }
-
-  if($data['login']['result'] == "Success")
-  {
-    logfile("Login erfolgreich");
-
-    //Cookie aufbauen
-    $cookies = array($data['login']['cookieprefix']."_session" => $data['login']['cookieprefix']."_session=".$data['login']['sessionid'],
-                     $data['login']['cookieprefix']."UserID" => $data['login']['cookieprefix']."UserID=".$data['login']['lguserid'], //   [commonswikiUserID] =>  commonswikiUserID=205395
-                     $data['login']['cookieprefix']."UserName" => $data['login']['cookieprefix']."UserName=".$data['login']['lgusername'],
-                     $data['login']['cookieprefix']."Token" => $data['login']['cookieprefix']."Token=".$data['login']['lgtoken']);
-  } else {
-    suicide("Login nicht erfolgreich! (".$data['login']['result'].")");
-  }
-
-  curl_close($ch);
 
   return $cookies;
 }
-
-
 
 ?>
