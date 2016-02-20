@@ -1,5 +1,6 @@
 <?php
-/* Copyright © by Luxo & Saibo, 2011
+/*   Copyright © by Luxo & Saibo, 2011 - 2014
+                 by Steinsplitter, 2014  -
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,13 +16,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// switching off error reporting (EVIL!)
-//error_reporting(0);
+include("/data/project/sbot/Peachy/upload.php");
+include("/data/project/sbot/Peachy/login.php");
 
-$homedir = "/data/project/sbot/Rotatebot/";
+
+$homedir = "/data/project/sbot/Peachy/";
 $myLockfile = $homedir."rotatebotlock";
 
-ini_set('memory_limit', '100M'); //Speicher auf 100 MBytes hochsetzen
+ini_set('memory_limit', '1000M'); //Speicher auf 100 MBytes hochsetzen
 ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com');
 
 
@@ -55,8 +57,8 @@ getLockOrDie($dontDieOnLockProblems); //check for other concurrently running rot
 // after this line only suicide() should be done instead of die()!
 
 
-logfile("Verbinde zur Datenbank!");
-$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'passwd') or suicide ("Can't connect to MySQL");
+logfile("Connecting to database");
+$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'neisahnughaexeji') or suicide ("Can't connect to MySQL");
 $database = "commonswiki_p";
 mysql_select_db($database, $myslink)
                         or suicide ("Konnte $databas nicht öffnen: ".mysql_error());
@@ -142,8 +144,9 @@ logfile("check ".$picture['title']."...");
 if(substr(strtolower($picture['title']),-4) == ".jpg" OR substr(strtolower($picture['title']),-5) == ".jpeg") { $catcontent[$arraykey]['filetype'] = "jpg"; }
 else if(substr(strtolower($picture['title']),-4) == ".png") { $catcontent[$arraykey]['filetype'] = "png"; }
 else if(substr(strtolower($picture['title']),-4) == ".gif") { $catcontent[$arraykey]['filetype'] = "gif"; }
+else if(substr(strtolower($picture['title']),-5) == ".tiff" OR substr(strtolower($picture['title']),-4) == ".tif") { $catcontent[$arraykey]['filetype'] = "tif"; }
 else { $wrongfile = true;
-       $wrongfiles[$picture["title"]] = "wrong filetype (".substr(strtolower($picture['title']),-3).")";
+       $wrongfiles[$picture["title"]] = "filetype not supported (".substr(strtolower($picture['title']),-3).")";
         }
 //sortkey ab umbruchstelle beschneiden
 $picture["sortkey"] = trim(stristr(hexToStr($picture["sortkey"]), "\n", true));
@@ -560,7 +563,7 @@ foreach($catcontent as $filename => $arraycontent)
   }
   else //Für png's und gif's
   {
-    passthru("convert ".$savepath.$filename.".".$arraycontent['filetype']." -rotate ".$arraycontent['degree']." ".$savepath.$filename."_2.".$arraycontent['filetype'],$returnP);
+    passthru("/usr/bin/convert ".$savepath.$filename.".".$arraycontent['filetype']." -rotate ".$arraycontent['degree']." ".$savepath.$filename."_2.".$arraycontent['filetype'],$returnP);
     logfile($arraycontent['title']." rotated by ".$arraycontent['degree']."°: ".$returnP);
   }
   // TODO:  ich bau mal ne Verwendung von $returnP in der Fehlerbehandlung nachfolgend ein..  der Fehlerwert beim PNG/GIF-Drehen wird gar nicht verwendet
@@ -630,9 +633,6 @@ foreach($catcontent as $filename => $arraycontent)
 logfile("ALl images turned and exif corrected!\nStart upload...");
 
 // ####################### Bilder gedreht! Weiter gehts mit Hochladen :) ############
-include("upload.php");
-include("login.php");
-
 
 foreach($catcontent2 as $filename => $arraycontent)
         {
@@ -652,7 +652,21 @@ foreach($catcontent2 as $filename => $arraycontent)
 
         //Hochladen
         Logfile("upload ".$arraycontent['title']." ... intern name: ".$filename."_2.".$arraycontent['filetype']);
+
+
+if ($config['PUploadTool'] == "false") {
         wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
+
+} else {
+        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
+        $site = Peachy::newWiki( "commons" );
+        $site->set_runpage( null );
+        $title = $arraycontent['title'];
+        $title2 = str_replace("File:", "", $title);
+        $titlelocal = $filename."_2.".$arraycontent['filetype'];
+        $site->initImage( $title2 )->api_upload($titlelocal,'', $filesum );
+}
+
         Logfile($arraycontent['title']." uploaded!");
         $catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
         //Quelltext laden
@@ -683,7 +697,11 @@ foreach($catcontent2 as $filename => $arraycontent)
           $edsum = sprintf($config['editsummary'],$arraycontent['degree']);
   }
 
-        $c = wikiedit("commons.wikimedia.org",$arraycontent['title'],$forupload,$edsum,"1");
+        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
+        $site = Peachy::newWiki( "commons" );
+        $site->set_runpage( null );
+        $site->initPage( $arraycontent['title'] )->edit( $forupload, $edsum );
+
 
         if($c == true)
         {
@@ -712,9 +730,9 @@ logfile("Upload finished. Do error pictures now.");
 //Cache leeren
 foreach($catcontent2 as $filename => $arraycontent)
 {
-unlink("/data/project/sbot/Rotatebot/cache/".$filename.".".$arraycontent['filetype']);
-unlink("/data/project/sbot/Rotatebot/cache/".$filename."_2.".$arraycontent['filetype']);
-unlink("/data/project/sbot/Rotatebot/cache/".$filename."_2.".$arraycontent['filetype']."_original");
+unlink("/data/project/sbot/Peachy/cache/".$filename.".".$arraycontent['filetype']);
+unlink("/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype']);
+unlink("/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype']."_original");
 }
 logfile("cache cleared. Write log now.");
 
@@ -748,7 +766,12 @@ foreach($wrongfiles as $title => $reason)
   if($count > 0)
   {
 
-    wikiedit("commons.wikimedia.org",str_replace(" ", "_",$title),$forupload,"Bot: Can't rotate image","1");
+//    wikiedit("commons.wikimedia.org",str_replace(" ", "_",$title),$forupload,"Bot: Can't rotate image","1");
+        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
+        $site = Peachy::newWiki( "commons" );
+        $site->set_runpage( null );
+        $site->initPage( $title )->edit( $forupload, "Bot: Can't rotate image" );
+
     $logfilew .= "\n----\n
     <span style=\"color:red;text-decoration:blink\">'''Error'''</span> can't rotate [[:$title]]:\n ''$reason''\n";
 
@@ -776,23 +799,23 @@ foreach($catcontent2 as $arraycontent)
   if($nodelete[$arraycontent['title']] == 1)
   {
 
-    $logfilew .= "<p>Template not found, file probably still in the category!</p>\n";
+//    $logfilew .= "<p>Template not found, file probably still in the category!</p>\n";
 
   }
 
 
   if($arraycontent['metadata']['Make'] and $arraycontent['metadata']['DateTimeDigitized'])
   {
-    $logfilew .= "**Image taken with a [[:en:".trim($arraycontent['metadata']['Make'])."|".ucwords(strtolower(trim($arraycontent['metadata']['Make'])))."]] ".ucwords(strtolower(trim($arraycontent['metadata']['Model'])))." at ".trim($arraycontent['metadata']['DateTimeDigitized']).".\n";
+    $logfilew .= "*:Image taken with a [[:en:".trim($arraycontent['metadata']['Make'])."|".ucwords(strtolower(trim($arraycontent['metadata']['Make'])))."]] ".ucwords(strtolower(trim($arraycontent['metadata']['Model'])))." at ".trim($arraycontent['metadata']['DateTimeDigitized']).".\n";
   }
 
-  $logfilew .= "**Last image-version uploaded by [[User:".$arraycontent['uploader']."|]] at ".timestampto($arraycontent['upltime'])." (UTC)\n";
+  $logfilew .= "*:Last image-version uploaded by [[User:".$arraycontent['uploader']."|]] at ".timestampto($arraycontent['upltime'])." (UTC)\n";
   if($arraycontent['tmplsetter'])
   {
-    $logfilew .= "**{{[[Template:Rotate|]]}} added (or modified) by [[User:".$arraycontent['tmplsetter']."|]] at ".timestampto($arraycontent['since'])." (UTC)\n";
+    $logfilew .= "*:{{[[Template:Rotate|]]}} added (or modified) by [[User:".$arraycontent['tmplsetter']."|]] at ".timestampto($arraycontent['since'])." (UTC)\n";
     $logfilew .= $userforlog[$arraycontent['tmplsetter']]."\n";
   }
-  $logfilew .= "**Rotated by ~~~ through ".$arraycontent['degree']."° at ".timestampto($arraycontent['doneat'])." (UTC) (=".difftime($arraycontent['since'],$arraycontent['doneat'])." later)\n";
+  $logfilew .= "*:Rotated through ".$arraycontent['degree']."° at ".timestampto($arraycontent['doneat'])." (UTC) (=".difftime($arraycontent['since'],$arraycontent['doneat'])." later)\n";
   $logfilew .= "<br style=\"clear:both;\" clear=\"all\" />";
 }
 
@@ -805,21 +828,19 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
     $msgerr = ", ".count($wrongfiles)." errors";
   }
 
-  wikiedit("commons.wikimedia.org","User:SteinsplitterBot/Rotatebot",$logfilew,"Bot: $somanyrot images rotated".$msgerr.".","1");
+//  wikiedit("commons.wikimedia.org","User:SteinsplitterBot/Rotatebot",$logfilew,"Bot: $somanyrot images rotated".$msgerr.".","1");
+        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
+        $site = Peachy::newWiki( "commons" );
+        $site->set_runpage( null );
+        $site->initPage( "User:SteinsplitterBot/Rotatebot" )->edit( $logfilew, "Bot: $somanyrot images rotated." );
+
 }
 
-mysql_close($myslink); // TODO should/can this be moved to function suicide? - Probably not due to line 33.
+mysql_close($myslink);
 suicide ("Bot finished.");
 // END script
 
-
-
-
-
 // functions start:
-
-
-
 
 function logfile($text)
 {
@@ -934,9 +955,9 @@ logfile("nothing to delete, just add");
 return $content;
 
 //COUNTER
-$counter = file_get_contents("/data/project/sbot/Rotatebot/counter.txt");
+$counter = file_get_contents("/data/project/sbot/Peachy/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/data/project/sbot/Rotatebot/counter.txt",$counter);
+file_put_contents("/data/project/sbot/Peachy/counter.txt",$counter);
 }
 else
 {
@@ -962,9 +983,9 @@ logfile("delete section 1 to $bereich");
 $intro = substr($content,0,$abschnittarray['1']);
 
 //COUNTER
-$counter = file_get_contents("/data/project/sbot/Rotatebot/counter.txt");
+$counter = file_get_contents("/data/project/sbot/Peachy/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/data/project/sbot/Rotatebot/counter.txt",$counter);
+file_put_contents("/data/project/sbot/Peachy/counter.txt",$counter);
 logfile("new counter: $counter.");
 
 $intro = sprintf($logheader."\n",$abschnitteneu,$counter); //NEU in settings definiert: der header vom Log
