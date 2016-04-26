@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /*   Copyright © by Luxo & Saibo, 2011 - 2014
                  by Steinsplitter, 2014  -
 
@@ -16,16 +16,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-include("/data/project/sbot/Peachy/upload.php");
-include("/data/project/sbot/Peachy/login.php");
-
-
 $homedir = "/data/project/sbot/Peachy/";
 $myLockfile = $homedir."rotatebotlock";
 
 ini_set('memory_limit', '1000M'); //Speicher auf 100 MBytes hochsetzen
 ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com');
 
+//Dependency: https://github.com/MW-Peachy/Peachy
+require( '/data/project/sbot/Peachy/Peachy/Init.php' );
 
 logfile("Starte Bot!");
 $config = botsetup();
@@ -45,6 +43,8 @@ if ($config['killAllRotatebots'] == "true") {
         logfile("signal 9");
         system("pkill -9 -f 'php rotbot/rotbot.php'");
         // we should be all dead now
+        suicide();
+        echo "killAllRotatebots is true. Cannot start!";
 }
 
 $dontDieOnLockProblems = false;
@@ -58,10 +58,11 @@ getLockOrDie($dontDieOnLockProblems); //check for other concurrently running rot
 
 
 logfile("Connecting to database");
-$myslink = mysql_connect('commonswiki.labsdb', 's51916', 'neisahnughaexeji') or suicide ("Can't connect to MySQL");
-$database = "commonswiki_p";
-mysql_select_db($database, $myslink)
-                        or suicide ("Konnte $databas nicht öffnen: ".mysql_error());
+$tools_pw = posix_getpwuid ( posix_getuid () );
+$tools_mycnf = parse_ini_file( $tools_pw['dir'] . "/replica.my.cnf" );
+$db = new mysqli( 'commonswiki.labsdb', $tools_mycnf['user'], $tools_mycnf['password'], 'commonswiki_p' );
+if ( $db->connect_errno )
+        die( "Failed to connect to labsdb: (" . $db->connect_errno . ") " . $db->connect_error );
 //Datenbank verbunden
 
 $wrongfiles = array();
@@ -70,9 +71,9 @@ $wrongfiles = array();
 $katname = "Images_requiring_rotation_by_bot";
 logfile("Prüfe 'Category:$katname' auf Bilder");
 
-$queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=php&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
+$queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=json&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
 $rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
-$contentarray = unserialize($rawrequ);
+$contentarray = json_decode($rawrequ, true);
 
 if(!$contentarray['query']['categorymembers']['0'])
 {
@@ -112,9 +113,9 @@ foreach($contentarray['pages'] as $picture)
 }
 $urlpageids = substr($urlpageids,1); //vorderster | wieder wegnehmen (JA, unsauber ;-)
 
-$queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=php&iiprop=timestamp|user|url|size|metadata";
+$queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=json&iiprop=timestamp|user|url|size|metadata";
 $rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
-$contentarray2 = unserialize($rawrequ);
+$contentarray2  = json_decode($rawrequ, true);
 
 $contentarray2['pages'] = $contentarray2['query']['pages'];
 //vorhandenes array einbinden
@@ -202,8 +203,8 @@ foreach($picture['revisions'] as $key => $revisions)
   {
     logfile("set time($revitimestp) not identical with this rv, ".$revisions['timestamp'].".");
     //Rev's nachladen
-    $ctxctx = file_get_contents("https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=php") or suicide("api error");
-    $totrevs = unserialize($ctxctx);
+    $ctxctx = file_get_contents("https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=json") or suicide("api error");
+    $totrevs = json_decode($ctxctx, true);
     logfile("ID: ".$picture['pageid']." ");
 
     if(is_array($totrevs))
@@ -229,16 +230,16 @@ foreach($picture['revisions'] as $key => $revisions)
 }
 
 
-//Benutzer prüfen! #########################################
+//Check user! #########################################
 if($catcontent[$arraykey]['tmplsetter']) //autoconfirmed
 {
   $wgAuthor = $catcontent[$arraykey]['tmplsetter'];
   logfile("check user ".$wgAuthor.".");
 
-  //Datenbank abfragen nach status
+  //Checking db for status
   if(!$cachedbar["$wgAuthor"])
   {
-    $mysresult = mysql_query( "SELECT user_id, user_name, user_registration, user_editcount FROM user WHERE user_name='".mysql_real_escape_string($wgAuthor)."'") or suicide("MySQL error");
+    $mysresult = $db->query( "SELECT user_id, user_name, user_registration, user_editcount FROM user WHERE user_name='".$db->real_escape_string($wgAuthor)."'") or suicide("MySQL error");
     $a_row = mysql_fetch_row($mysresult);
     $cachedbar[$wgAuthor] = $a_row;
   }
@@ -561,7 +562,7 @@ foreach($catcontent as $filename => $arraycontent)
         }
     }
   }
-  else //Für png's und gif's
+  else //For png's und gif's
   {
     passthru("/usr/bin/convert ".$savepath.$filename.".".$arraycontent['filetype']." -rotate ".$arraycontent['degree']." ".$savepath.$filename."_2.".$arraycontent['filetype'],$returnP);
     logfile($arraycontent['title']." rotated by ".$arraycontent['degree']."°: ".$returnP);
@@ -655,37 +656,35 @@ foreach($catcontent2 as $filename => $arraycontent)
 
 
 if ($config['PUploadTool'] == "false") {
-        wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
-
+//      include("/data/project/sbot/Peachy/upload.php");
+//      include("/data/project/sbot/Peachy/login.php");
+//      wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
+        echo "Old wiki upload has been disabled. Please install peachy dependencies and change config.";
+        suicide();
 } else {
-        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
+        echo "\n--- STARTING FILE UPLOAD ---\n";
         $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $title = $arraycontent['title'];
-        $title2 = str_replace("File:", "", $title);
-        $titlelocal = $filename."_2.".$arraycontent['filetype'];
-        $site->initImage( $title2 )->api_upload($titlelocal,'', $filesum );
+        $title2 = str_replace(" ", "_", $title);
+        $titlelocal =  "/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype'];
+        $site->initImage( $title2 )->api_upload($titlelocal,'', $filesum, $watch = null, $ignorewarnings = true, $async = false );
+        echo "\n--- END FILE UPLOAD ---\n\n";
+        sleep(2);
 }
 
         Logfile($arraycontent['title']." uploaded!");
         $catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
+
         //Quelltext laden
-        // SCHLAFEN
         $quelltext = file_get_contents("https://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
 
         //Template erkennen
-        $strabtemp = NULL;
-        $strabtemp = stristr($quelltext, "{{rotate");
-        if(!$strabtemp) { $strabtemp = stristr($quelltext, "{{Template:Rotate"); }
-        $upto = strpos($strabtemp,"}}");
-        $template = substr($strabtemp,0,$upto+2);
-
-        //löschen
-        $forupload = str_ireplace($template."\n", "", $quelltext, $count); // delete template and a newline directly afterwards
-        $forupload = str_ireplace($template, "", $forupload, $count2); // delete template
+          $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|.*\}\}\n|\{\{[Rr]otate\|.*\}\})/', '', $quelltext);
+          $count_alt = "1";
 
         //Speichern
-        if($count + $count2 > 0)
+        if($count_alt > 0)
         {
         logfile("remove template $template");
 
@@ -697,7 +696,6 @@ if ($config['PUploadTool'] == "false") {
           $edsum = sprintf($config['editsummary'],$arraycontent['degree']);
   }
 
-        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
         $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $site->initPage( $arraycontent['title'] )->edit( $forupload, $edsum );
@@ -727,7 +725,7 @@ logfile("Upload finished. Do error pictures now.");
 
 
 
-//Cache leeren
+//Clean cache
 foreach($catcontent2 as $filename => $arraycontent)
 {
 unlink("/data/project/sbot/Peachy/cache/".$filename.".".$arraycontent['filetype']);
@@ -765,9 +763,6 @@ foreach($wrongfiles as $title => $reason)
   $forupload = $renametemp.$forupload;
   if($count > 0)
   {
-
-//    wikiedit("commons.wikimedia.org",str_replace(" ", "_",$title),$forupload,"Bot: Can't rotate image","1");
-        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
         $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $site->initPage( $title )->edit( $forupload, "Bot: Can't rotate image" );
@@ -788,13 +783,13 @@ foreach($wrongfiles as $title => $reason)
 }
 
 
-//Normaler Log schreiben
+//Writing to logfile
 
 foreach($catcontent2 as $arraycontent)
 {
   $logfilew .= "\n----\n";
   $logfilew .= "[[".$arraycontent['title']."|thumb|110px]]\n";
-  $logfilew .= "*[[:".$arraycontent['title']."]] (".$arraycontent['size'].")\n";
+  $logfilew .= "*[[:".str_replace("_", " ", $arraycontent['title'])."]] (".$arraycontent['size'].")\n";
 
   if($nodelete[$arraycontent['title']] == 1)
   {
@@ -803,11 +798,6 @@ foreach($catcontent2 as $arraycontent)
 
   }
 
-
-  if($arraycontent['metadata']['Make'] and $arraycontent['metadata']['DateTimeDigitized'])
-  {
-    $logfilew .= "*:Image taken with a [[:en:".trim($arraycontent['metadata']['Make'])."|".ucwords(strtolower(trim($arraycontent['metadata']['Make'])))."]] ".ucwords(strtolower(trim($arraycontent['metadata']['Model'])))." at ".trim($arraycontent['metadata']['DateTimeDigitized']).".\n";
-  }
 
   $logfilew .= "*:Last image-version uploaded by [[User:".$arraycontent['uploader']."|]] at ".timestampto($arraycontent['upltime'])." (UTC)\n";
   if($arraycontent['tmplsetter'])
@@ -827,16 +817,13 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
   {
     $msgerr = ", ".count($wrongfiles)." errors";
   }
-
-//  wikiedit("commons.wikimedia.org","User:SteinsplitterBot/Rotatebot",$logfilew,"Bot: $somanyrot images rotated".$msgerr.".","1");
-        require_once( '/data/project/sbot/Peachy/Peachy/Init.php' );
         $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $site->initPage( "User:SteinsplitterBot/Rotatebot" )->edit( $logfilew, "Bot: $somanyrot images rotated." );
 
 }
 
-mysql_close($myslink);
+unset( $tools_mycnf, $tools_pw );
 suicide ("Bot finished.");
 // END script
 
