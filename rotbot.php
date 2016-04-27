@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /*   Copyright © by Luxo & Saibo, 2011 - 2014
                  by Steinsplitter, 2014  -
 
@@ -24,6 +24,8 @@ ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com'
 
 //Dependency: https://github.com/MW-Peachy/Peachy
 require( '/data/project/sbot/Peachy/Peachy/Init.php' );
+
+$site = Peachy::newWiki( "commons" );
 
 logfile("Starte Bot!");
 $config = botsetup();
@@ -663,7 +665,6 @@ if ($config['PUploadTool'] == "false") {
         suicide();
 } else {
         echo "\n--- STARTING FILE UPLOAD ---\n";
-        $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $title = $arraycontent['title'];
         $title2 = str_replace(" ", "_", $title);
@@ -696,7 +697,6 @@ if ($config['PUploadTool'] == "false") {
           $edsum = sprintf($config['editsummary'],$arraycontent['degree']);
   }
 
-        $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $site->initPage( $arraycontent['title'] )->edit( $forupload, $edsum );
 
@@ -763,7 +763,6 @@ foreach($wrongfiles as $title => $reason)
   $forupload = $renametemp.$forupload;
   if($count > 0)
   {
-        $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $site->initPage( $title )->edit( $forupload, "Bot: Can't rotate image" );
 
@@ -817,7 +816,6 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
   {
     $msgerr = ", ".count($wrongfiles)." errors";
   }
-        $site = Peachy::newWiki( "commons" );
         $site->set_runpage( null );
         $site->initPage( "User:SteinsplitterBot/Rotatebot" )->edit( $logfilew, "Bot: $somanyrot images rotated." );
 
