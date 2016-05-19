@@ -241,8 +241,8 @@ if($catcontent[$arraykey]['tmplsetter']) //autoconfirmed
   //Checking db for status
   if(!$cachedbar["$wgAuthor"])
   {
-    $mysresult = $db->query( "SELECT user_id, user_name, user_registration, user_editcount FROM user WHERE user_name='".$db->real_escape_string($wgAuthor)."'") or suicide("MySQL error");
-    $a_row = mysql_fetch_row($mysresult);
+    $mysresult = $db->query( "SELECT user_id, user_name, user_registration, user_editcount FROM user WHERE user_name='".$db->real_escape_string($wgAuthor)."'");
+    $a_row = mysqli_fetch_row($mysresult);
     $cachedbar[$wgAuthor] = $a_row;
   }
   else
