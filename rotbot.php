@@ -681,7 +681,7 @@ if ($config['PUploadTool'] == "false") {
         $quelltext = file_get_contents("https://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
 
         //Template erkennen
-          $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|.*\}\}\n|\{\{[Rr]otate\|.*\}\})/', '', $quelltext);
+          $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|[^\}\}]*\}\}\n|\{\{[Rr]otate\|[^\}\}]*\}\})/', '', $quelltext);
           $count_alt = "1";
 
         //Speichern
