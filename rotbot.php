@@ -74,7 +74,9 @@ $katname = "Images_requiring_rotation_by_bot";
 logfile("Prüfe 'Category:$katname' auf Bilder");
 
 $queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=json&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
-$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
+//$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
+$rawrequ = $site->get_http()->get( $queryurl );
+
 $contentarray = json_decode($rawrequ, true);
 
 if(!$contentarray['query']['categorymembers']['0'])
@@ -116,7 +118,9 @@ foreach($contentarray['pages'] as $picture)
 $urlpageids = substr($urlpageids,1); //vorderster | wieder wegnehmen (JA, unsauber ;-)
 
 $queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=json&iiprop=timestamp|user|url|size|metadata";
-$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
+//$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
+$rawrequ = $site->get_http()->get( $queryurl );
+
 $contentarray2  = json_decode($rawrequ, true);
 
 $contentarray2['pages'] = $contentarray2['query']['pages'];
@@ -205,7 +209,8 @@ foreach($picture['revisions'] as $key => $revisions)
   {
     logfile("set time($revitimestp) not identical with this rv, ".$revisions['timestamp'].".");
     //Rev's nachladen
-    $ctxctx = file_get_contents("https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=json") or suicide("api error");
+    $ctxctx1 = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=json";
+    $ctxctx = $site->get_http()->get( $ctxctx1 );
     $totrevs = json_decode($ctxctx, true);
     logfile("ID: ".$picture['pageid']." ");
 
@@ -372,7 +377,7 @@ $savepath = $homedir."cache/";
 //fclose($fp);
 //$file = ob_get_contents();
 //ob_clean();
-$file = file_get_contents($arraycontent['url']) or suicide("Kann ".$arraycontent['title']." nicht downloaden! (".$arraycontent['url'].")");
+$file = $site->get_http()->get( $arraycontent['url'] );
 
 $fp = fopen($savepath.$filename.".".$arraycontent['filetype'], "wb+");
 fwrite($fp, $file);
@@ -664,6 +669,7 @@ if ($config['PUploadTool'] == "false") {
         echo "Old wiki upload has been disabled. Please install peachy dependencies and change config.";
         suicide();
 } else {
+        sleep(1);
         echo "\n--- STARTING FILE UPLOAD ---\n";
         $site->set_runpage( null );
         $title = $arraycontent['title'];
@@ -671,15 +677,14 @@ if ($config['PUploadTool'] == "false") {
         $titlelocal =  "/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype'];
         $site->initImage( $title2 )->api_upload($titlelocal,'', $filesum, $watch = null, $ignorewarnings = true, $async = false );
         echo "\n--- END FILE UPLOAD ---\n\n";
-        sleep(2);
+        sleep(4);
 }
 
         Logfile($arraycontent['title']." uploaded!");
         $catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
 
         //Quelltext laden
-        $quelltext = file_get_contents("https://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$arraycontent['title']))."&action=raw");
-
+        $quelltext = $site->initPage( $arraycontent['title'] )->get_text();
         //Template erkennen
           $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|[^\}\}]*\}\}\n|\{\{[Rr]otate\|[^\}\}]*\}\})/', '', $quelltext);
           $count_alt = "1";
@@ -736,7 +741,7 @@ logfile("cache cleared. Write log now.");
 
 //##################### LOG LOG LOG LOG LOG LOG LOG #########################
 
-$logfilew = file_get_contents("https://commons.wikimedia.org/w/index.php?title=User:SteinsplitterBot/Rotatebot&action=raw");
+$logfilew = $site->initPage( 'User:SteinsplitterBot/Rotatebot' )->get_text();
 $somanyrot = count($catcontent2);
 
 $logfilew = deleteold($logfilew,$somanyrot,$config['logfilesize'],$config['logheader']);
@@ -747,7 +752,7 @@ foreach($wrongfiles as $title => $reason)
 
 
 
-  $quelltext = file_get_contents("https://commons.wikimedia.org/w/index.php?title=".urlencode(str_replace(" ", "_",$title))."&action=raw");
+  $quelltext = $site->initPage( $title )->get_text();
 
   $forupload = str_ireplace("{{rotate", "{{rotate|nobot=true|reason='''Reason''': $reason", $quelltext, $count);
 
@@ -818,11 +823,12 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
   }
         $site->set_runpage( null );
         $site->initPage( "User:SteinsplitterBot/Rotatebot" )->edit( $logfilew, "Bot: $somanyrot images rotated." );
-
 }
 
 unset( $tools_mycnf, $tools_pw );
+$site->set_runpage( null );
 suicide ("Bot finished.");
+sleep( 60 );
 // END script
 
 // functions start:
