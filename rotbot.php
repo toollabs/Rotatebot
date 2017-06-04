@@ -677,7 +677,9 @@ if ($config['PUploadTool'] == "false") {
         $titlelocal =  "/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype'];
         $site->initImage( $title2 )->api_upload($titlelocal,'', $filesum, $watch = null, $ignorewarnings = true, $async = false );
         echo "\n--- END FILE UPLOAD ---\n\n";
-        sleep(4);
+        sleep(2);
+        $site->initPage( $title2 )->purge();
+        sleep(1);
 }
 
         Logfile($arraycontent['title']." uploaded!");
@@ -686,8 +688,8 @@ if ($config['PUploadTool'] == "false") {
         //Quelltext laden
         $quelltext = $site->initPage( $arraycontent['title'] )->get_text();
         //Template erkennen
-          $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|[^\}\}]*\}\}\n|\{\{[Rr]otate\|[^\}\}]*\}\})/', '', $quelltext);
-          $count_alt = "1";
+        $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|[^\}\}]*\}\}\n|\{\{[Rr]otate\|[^\}\}]*\}\})/', '', $quelltext);
+        $count_alt = "1";
 
         //Speichern
         if($count_alt > 0)
@@ -1056,7 +1058,7 @@ function hexToStr($hex)
 //        global $myLockfile - String containing a filename to be touched
 //        $dontDieOnLockProblems - Boolean for overriding death
 function getLockOrDie($dontDieOnLockProblems) {
-        global $myLockfile;
+        global $myLockfile, $site;
 
         if (!file_exists($myLockfile)) {
                 system("touch ".$myLockfile);
@@ -1071,7 +1073,10 @@ function getLockOrDie($dontDieOnLockProblems) {
                 if ($dontDieOnLockProblems) {
                         logfile("Could not get lock. Lock file already present. DontDieMode prevents death.");
                 } else {
-                        die("Could not get lock. Lock file already present. Exit.");
+                        $locktextz = "\n<br style='clear:both;' clear='all' />\n----\n\n    <span style='color:red;text-decoration:blink'>Error</span> Bot locked itself after a internal problem (~~~~~).";
+                        $reasonz = 'Bot:Could not get lock. Lock file already present. Exit.';
+                        $site->initPage( 'User:SteinsplitterBot/Rotatebot' )->append( $locktextz, $reasonz );
+                        die("Could not get lock. Lock file already present.");
                 }
         }
 }
