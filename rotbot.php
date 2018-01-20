@@ -23,11 +23,11 @@ ini_set('memory_limit', '1000M'); //Speicher auf 100 MBytes hochsetzen
 ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com');
 
 //Dependency: https://github.com/MW-Peachy/Peachy
-require( '/data/project/sbot/Peachy/Peachy/Init.php' );
+require( $homedir."Peachy/Init.php" );
 
 $site = Peachy::newWiki( "commons" );
 
-logfile("Starte Bot!");
+logfile("Starting bot...");
 $config = botsetup();
 if($config['active'] == "false") {
         die("Bot disabled.");
@@ -54,7 +54,8 @@ if ($config['dontDieOnLockProblems'] == "true") {
         logfile("ATTENTION: dontDieOnLockProblems is true! Lockfile problems (like lockfile already present) will be ignored.");
         $dontDieOnLockProblems = true;
 }
-getLockOrDie($dontDieOnLockProblems); //check for other concurrently running rotatebot instances. Exit if not alone on the world
+$holdtm = $config['maxlockfiletime'];
+getLockOrDie($dontDieOnLockProblems, $holdtm); //check for other concurrently running rotatebot instances. Exit if not alone on the world
 // continue ONLY if we are not dead ...
 // after this line only suicide() should be done instead of die()!
 
@@ -63,15 +64,17 @@ logfile("Connecting to database");
 $tools_pw = posix_getpwuid ( posix_getuid () );
 $tools_mycnf = parse_ini_file( $tools_pw['dir'] . "/replica.my.cnf" );
 $db = new mysqli( 'commonswiki.labsdb', $tools_mycnf['user'], $tools_mycnf['password'], 'commonswiki_p' );
-if ( $db->connect_errno )
+if ( $db->connect_errno ) {
+        logfile("Failed to connect to labsdb.");
         die( "Failed to connect to labsdb: (" . $db->connect_errno . ") " . $db->connect_error );
+    }
 //Datenbank verbunden
 
 $wrongfiles = array();
 
 //Kategorie auf Bilder überprüfen
 $katname = "Images_requiring_rotation_by_bot";
-logfile("Prüfe 'Category:$katname' auf Bilder");
+logfile("Checking 'Category:$katname' for files.");
 
 $queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=json&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
 //$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
@@ -81,7 +84,7 @@ $contentarray = json_decode($rawrequ, true);
 
 if(!$contentarray['query']['categorymembers']['0'])
 {
-  suicide(logfile("Kategorie leer."));
+  suicide(logfile("Category empty, no files found!."));
 }
 
 //NS filter (was disabled on api 10.07.09)
@@ -145,7 +148,7 @@ foreach($contentarray['pages'] as $picture)
 {
 $wrongfile = false;
 logfile("-------------");
-logfile("check ".$picture['title']."...");
+logfile("Checking ".$picture['title']."...");
 
 //dateiendung bestimmen - gültiges Dateiformat?
 if(substr(strtolower($picture['title']),-4) == ".jpg" OR substr(strtolower($picture['title']),-5) == ".jpeg") { $catcontent[$arraykey]['filetype'] = "jpg"; }
@@ -241,7 +244,7 @@ foreach($picture['revisions'] as $key => $revisions)
 if($catcontent[$arraykey]['tmplsetter']) //autoconfirmed
 {
   $wgAuthor = $catcontent[$arraykey]['tmplsetter'];
-  logfile("check user ".$wgAuthor.".");
+  logfile("Checking user ".$wgAuthor.".");
 
   //Checking db for status
   if(!$cachedbar["$wgAuthor"])
@@ -400,7 +403,7 @@ foreach($catcontent as $filename => $arraycontent)
      // /usr/bin/exiftool -IFD0:Orientation -b 1.jpg     -a is to get dupe tags, too
      $exif = system("/usr/bin/exiftool -IFD0:Orientation -b -a ".$savepath.$filename.".".$arraycontent['filetype']."");
      settype($exif, "integer");
-     logfile("EXIF ist auf $exif");
+     logfile("EXIF is $exif");
      $arraycontent['exifkey'] = $exif; //for editsummary
 
      if ($arraycontent['degree'] == "RESETEXIF") {   // if ignoring EXIF is wished ...
@@ -453,7 +456,7 @@ foreach($catcontent as $filename => $arraycontent)
                 $arraycontent['realdegree'] = 0;  //    for editsummary
         } else {
                 $realrotate = $arraycontent['degree'] + $exifR;  // Saibo2 formula. user specified rotaation + already applied rotation by MW
-                logfile("Bild muss um $realrotate Grad gedreht werden.");
+                logfile("File must be rotated $realrotate degree.");
                 $realrotate = (360 + ($realrotate % 360)) % 360;    // convert to 0-259
                 $arraycontent['realdegree'] = $realrotate;  //    for editsummary
         }
@@ -838,6 +841,8 @@ sleep( 60 );
 function logfile($text)
 {
   echo $text."\n";
+  $ip = "". date("Y-m-d H:i:s") ." - ". $text . "\n";
+  file_put_contents( $homedir."rotatelogs/". date("Y-m-d") ."-rotlog.txt", $ip, FILE_APPEND);
 }
 
 function timestampto($intime,$unix=false)
@@ -1057,7 +1062,7 @@ function hexToStr($hex)
 //Params:
 //        global $myLockfile - String containing a filename to be touched
 //        $dontDieOnLockProblems - Boolean for overriding death
-function getLockOrDie($dontDieOnLockProblems) {
+function getLockOrDie($dontDieOnLockProblems, $holdtm) {
         global $myLockfile, $site;
 
         if (!file_exists($myLockfile)) {
@@ -1073,6 +1078,20 @@ function getLockOrDie($dontDieOnLockProblems) {
                 if ($dontDieOnLockProblems) {
                         logfile("Could not get lock. Lock file already present. DontDieMode prevents death.");
                 } else {
+                        system("touch ".$myLockfile);
+                        if (time()-filemtime($myLockfile) > $holdtm) {
+                        logfile("Lockfile older than". $holdtm .",  Removing lock file...");
+                        system("rm ".$myLockfile);
+                        sleep(6);
+                                        if (file_exists($myLockfile)) {
+                                                logfile("Warning: Lockfile was *not* removed.");
+                                        } else {
+                                                logfile("Lockfile removed. Setting up for a restart (may take a while)...");
+                                        }
+                        suicide();
+                        }
+
+
                         $locktextz = "\n<br style='clear:both;' clear='all' />\n----\n\n    <span style='color:red;text-decoration:blink'>Error</span> Bot locked itself after a internal problem (~~~~~).";
                         $reasonz = 'Bot:Could not get lock. Lock file already present. Exit.';
                         $site->initPage( 'User:SteinsplitterBot/Rotatebot' )->append( $locktextz, $reasonz );
