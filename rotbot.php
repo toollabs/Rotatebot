@@ -840,6 +840,7 @@ sleep( 60 );
 
 function logfile($text)
 {
+  global $homedir;
   echo $text."\n";
   $ip = "". date("Y-m-d H:i:s") ." - ". $text . "\n";
   file_put_contents( $homedir."rotatelogs/". date("Y-m-d") ."-rotlog.txt", $ip, FILE_APPEND);
