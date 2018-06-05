@@ -691,7 +691,7 @@ if ($config['PUploadTool'] == "false") {
         //Quelltext laden
         $quelltext = $site->initPage( $arraycontent['title'] )->get_text();
         //Template erkennen
-        $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate\|[^\}\}]*\}\}\n|\{\{[Rr]otate\|[^\}\}]*\}\})/', '', $quelltext);
+        $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate *\|[^\}\}]*\}\}\n|\{\{[Rr]otate *\|[^\}\}]*\}\})/', '', $quelltext);
         $count_alt = "1";
 
         //Speichern
