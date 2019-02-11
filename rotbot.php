@@ -16,16 +16,77 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-$homedir = "/data/project/sbot/Peachy/";
+$homedir = "/data/project/sbot/Peachy/Rotatestuff/";
+$homedir2 = "/data/project/sbot/Peachy/";
+
 $myLockfile = $homedir."rotatebotlock";
 
 ini_set('memory_limit', '1000M'); //Speicher auf 100 MBytes hochsetzen
 ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com');
 
-//Dependency: https://github.com/MW-Peachy/Peachy
-require( $homedir."Peachy/Init.php" );
+// Dependency: https://github.com/addwiki/mediawiki-api
 
-$site = Peachy::newWiki( "commons" );
+function getrawhttp($url) {
+        $con = curl_init();
+        $to = 4;
+        curl_setopt($con, CURLOPT_URL, $url);
+        curl_setopt($con, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($con, CURLOPT_CONNECTTIMEOUT, $to);
+        curl_setopt($con,CURLOPT_USERAGENT,'Rotatebot; User:Steinsplitter (wmflabs; php)');
+        $data = curl_exec($con);
+        curl_close($con);
+        return $data;
+}
+
+require 'vendor/autoload.php';
+
+use \Mediawiki\Api\MediawikiApi;
+$api = new \Mediawiki\Api\MediawikiApi( 'https://commons.wikimedia.org/w/api.php' );
+
+use \Mediawiki\Api\ApiUser;
+
+include 'accessdata.php';
+
+$api->login( new ApiUser( $botusername, $botkey ) );
+
+function RotateEdit( $ptitle, $contents, $summarys ) {
+global $api;
+
+if ( !$api->isLoggedin() ) {
+die();
+}
+
+$params = array (
+        'title' => $ptitle ,
+        'text' => $contents,
+        'summary' => $summarys ,
+        'bot' => 1
+) ;
+
+$params['token'] = $api->getToken();
+$params['bot'] = 1;
+$api->postRequest( new \Mediawiki\Api\SimpleRequest( "edit", $params ) );
+}
+
+function wikicontent( $pagename ) {
+global $api;
+
+if ( !$api->isLoggedin() ) {
+die();
+}
+        if ( $api ) {
+                        $services = new \Mediawiki\Api\MediawikiFactory( $api );
+                        $page = $services->newPageGetter()->getFromTitle( $pagename );
+                        $revision = $page->getRevisions()->getLatest();
+                        if ( $revision ) {
+                                $ret = $revision->getContent()->getData() ;
+                        }
+                }
+                return $ret ;
+        }
+
+
+
 
 logfile("Starting bot...");
 $config = botsetup();
@@ -78,7 +139,7 @@ logfile("Checking 'Category:$katname' for files.");
 
 $queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&list=categorymembers&cmtitle=Category:".$katname."&format=json&cmprop=ids|title|sortkey|timestamp&cmnamespace=6&cmsort=timestamp&cmtype=file&cmlimit=".$config['limit'];
 //$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
-$rawrequ = $site->get_http()->get( $queryurl );
+$rawrequ = getrawhttp( $queryurl );
 
 $contentarray = json_decode($rawrequ, true);
 
@@ -122,7 +183,7 @@ $urlpageids = substr($urlpageids,1); //vorderster | wieder wegnehmen (JA, unsaub
 
 $queryurl = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&pageids=".$urlpageids."&prop=revisions|imageinfo&format=json&iiprop=timestamp|user|url|size|metadata";
 //$rawrequ = file_get_contents($queryurl) or suicide("Error api.php not accessible.");
-$rawrequ = $site->get_http()->get( $queryurl );
+$rawrequ = getrawhttp( $queryurl );
 
 $contentarray2  = json_decode($rawrequ, true);
 
@@ -213,7 +274,7 @@ foreach($picture['revisions'] as $key => $revisions)
     logfile("set time($revitimestp) not identical with this rv, ".$revisions['timestamp'].".");
     //Rev's nachladen
     $ctxctx1 = "https://commons.wikimedia.org/w/api.php?action=query&rawcontinue=1&prop=revisions&pageids=".$picture['pageid']."&rvlimit=20&rvprop=timestamp|user|comment&format=json";
-    $ctxctx = $site->get_http()->get( $ctxctx1 );
+    $ctxctx = getrawhttp( $ctxctx1 );
     $totrevs = json_decode($ctxctx, true);
     logfile("ID: ".$picture['pageid']." ");
 
@@ -380,7 +441,7 @@ $savepath = $homedir."cache/";
 //fclose($fp);
 //$file = ob_get_contents();
 //ob_clean();
-$file = $site->get_http()->get( $arraycontent['url'] );
+$file = getrawhttp( $arraycontent['url'] );
 
 $fp = fopen($savepath.$filename.".".$arraycontent['filetype'], "wb+");
 fwrite($fp, $file);
@@ -665,7 +726,7 @@ foreach($catcontent2 as $filename => $arraycontent)
         Logfile("upload ".$arraycontent['title']." ... intern name: ".$filename."_2.".$arraycontent['filetype']);
 
 
-if ($config['PUploadTool'] == "false") {
+if ($config['MUploadTool'] == "false") {
 //      include("/data/project/sbot/Peachy/upload.php");
 //      include("/data/project/sbot/Peachy/login.php");
 //      wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
@@ -674,14 +735,23 @@ if ($config['PUploadTool'] == "false") {
 } else {
         sleep(1);
         echo "\n--- STARTING FILE UPLOAD ---\n";
-        $site->set_runpage( null );
+        if ( !$api->isLoggedin() ) {
+                echo "Issues with the api (not logged in).";
+                die();
+        }
         $title = $arraycontent['title'];
         $title2 = str_replace(" ", "_", $title);
-        $titlelocal =  "/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype'];
-        $site->initImage( $title2 )->api_upload($titlelocal,'', $filesum, $watch = null, $ignorewarnings = true, $async = false );
+        $titlelocal =  "/data/project/sbot/Peachy/Rotatestuff/cache/".$filename."_2.".$arraycontent['filetype'];
+
+        $services = new \Mediawiki\Api\MediawikiFactory( $api );
+        $fileUploader = $services->newFileUploader();
+
+        $fileUploader = $services->newFileUploader();
+        $fileUploader->setChunkSize( 1024 * 1024 * 10 );
+        $fileUploader->upload($targetName = $title2, $location= $titlelocal, $text = null, $comment = $filesum, $watchlist = 'nochange', $ignoreWarnings = 'true' );
+
+         //$site->initImage( $title2 )->api_upload($titlelocal,'', $filesum, $watch = null, $ignorewarnings = true, $async = false );
         echo "\n--- END FILE UPLOAD ---\n\n";
-        sleep(2);
-        $site->initPage( $title2 )->purge();
         sleep(1);
 }
 
@@ -689,7 +759,7 @@ if ($config['PUploadTool'] == "false") {
         $catcontent2[$filename]['doneat'] = date("Y-m-d\TH:i:s\Z",time());//2007-10-01T10:13:15Z
 
         //Quelltext laden
-        $quelltext = $site->initPage( $arraycontent['title'] )->get_text();
+        $quelltext = wikicontent( $arraycontent['title'] );
         //Template erkennen
         $forupload = preg_replace('/(^((?!\n).)*\{\{[Rr]otate *\|[^\}\}]*\}\}\n|\{\{[Rr]otate *\|[^\}\}]*\}\})/', '', $quelltext);
         $count_alt = "1";
@@ -707,8 +777,7 @@ if ($config['PUploadTool'] == "false") {
           $edsum = sprintf($config['editsummary'],$arraycontent['degree']);
   }
 
-        $site->set_runpage( null );
-        $site->initPage( $arraycontent['title'] )->edit( $forupload, $edsum );
+        RotateEdit( $arraycontent['title'],  $forupload, $edsum );
 
 
         if($c == true)
@@ -738,15 +807,15 @@ logfile("Upload finished. Do error pictures now.");
 //Clean cache
 foreach($catcontent2 as $filename => $arraycontent)
 {
-unlink("/data/project/sbot/Peachy/cache/".$filename.".".$arraycontent['filetype']);
-unlink("/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype']);
-unlink("/data/project/sbot/Peachy/cache/".$filename."_2.".$arraycontent['filetype']."_original");
+unlink("/data/project/sbot/Peachy/Rotatestuff/cache/".$filename.".".$arraycontent['filetype']);
+unlink("/data/project/sbot/Peachy/Rotatestuff/cache/".$filename."_2.".$arraycontent['filetype']);
+unlink("/data/project/sbot/Peachy/Rotatestuff/cache/".$filename."_2.".$arraycontent['filetype']."_original");
 }
 logfile("cache cleared. Write log now.");
 
 //##################### LOG LOG LOG LOG LOG LOG LOG #########################
 
-$logfilew = $site->initPage( 'User:SteinsplitterBot/Rotatebot' )->get_text();
+$logfilew = wikicontent( 'User:SteinsplitterBot/Rotatebot' );
 $somanyrot = count($catcontent2);
 
 $logfilew = deleteold($logfilew,$somanyrot,$config['logfilesize'],$config['logheader']);
@@ -757,7 +826,7 @@ foreach($wrongfiles as $title => $reason)
 
 
 
-  $quelltext = $site->initPage( $title )->get_text();
+  $quelltext = wikicontent( $title );
 
   $forupload = str_ireplace("{{rotate", "{{rotate|nobot=true|reason='''Reason''': $reason", $quelltext, $count);
 
@@ -773,8 +842,7 @@ foreach($wrongfiles as $title => $reason)
   $forupload = $renametemp.$forupload;
   if($count > 0)
   {
-        $site->set_runpage( null );
-        $site->initPage( $title )->edit( $forupload, "Bot: Can't rotate image" );
+        RotateEdit( $title, $forupload, "Bot: Can't rotate image" );
 
     $logfilew .= "\n----\n
     <span style=\"color:red;text-decoration:blink\">'''Error'''</span> can't rotate [[:$title]]:\n ''$reason''\n";
@@ -826,12 +894,10 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
   {
     $msgerr = ", ".count($wrongfiles)." errors";
   }
-        $site->set_runpage( null );
-        $site->initPage( "User:SteinsplitterBot/Rotatebot" )->edit( $logfilew, "Bot: $somanyrot images rotated." );
+        RotateEdit( "User:SteinsplitterBot/Rotatebot", $logfilew, "Bot: $somanyrot images rotated." );
 }
 
 unset( $tools_mycnf, $tools_pw );
-$site->set_runpage( null );
 suicide ("Bot finished.");
 sleep( 60 );
 // END script
@@ -840,10 +906,10 @@ sleep( 60 );
 
 function logfile($text)
 {
-  global $homedir;
+  global $homedir2;
   echo $text."\n";
   $ip = "". date("Y-m-d H:i:s") ." - ". $text . "\n";
-  file_put_contents( $homedir."rotatelogs/". date("Y-m-d") ."-rotlog.txt", $ip, FILE_APPEND);
+  file_put_contents( $homedir2."rotatelogs/". date("Y-m-d") ."-rotlog.txt", $ip, FILE_APPEND);
 }
 
 function timestampto($intime,$unix=false)
@@ -954,9 +1020,9 @@ logfile("nothing to delete, just add");
 return $content;
 
 //COUNTER
-$counter = file_get_contents("/data/project/sbot/Peachy/counter.txt");
+$counter = file_get_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/data/project/sbot/Peachy/counter.txt",$counter);
+file_put_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt",$counter);
 }
 else
 {
@@ -982,9 +1048,9 @@ logfile("delete section 1 to $bereich");
 $intro = substr($content,0,$abschnittarray['1']);
 
 //COUNTER
-$counter = file_get_contents("/data/project/sbot/Peachy/counter.txt");
+$counter = file_get_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/data/project/sbot/Peachy/counter.txt",$counter);
+file_put_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt",$counter);
 logfile("new counter: $counter.");
 
 $intro = sprintf($logheader."\n",$abschnitteneu,$counter); //NEU in settings definiert: der header vom Log
@@ -1078,6 +1144,7 @@ function getLockOrDie($dontDieOnLockProblems, $holdtm) {
         } else {
                 if ($dontDieOnLockProblems) {
                         logfile("Could not get lock. Lock file already present. DontDieMode prevents death.");
+
                 } else {
                         system("touch ".$myLockfile);
                         if (time()-filemtime($myLockfile) > $holdtm) {
@@ -1092,10 +1159,12 @@ function getLockOrDie($dontDieOnLockProblems, $holdtm) {
                         suicide();
                         }
 
-
                         $locktextz = "\n<br style='clear:both;' clear='all' />\n----\n\n    <span style='color:red;text-decoration:blink'>Error</span> Bot locked itself after a internal problem (~~~~~).";
+                        $reportpagee = "User:SteinsplitterBot/Rotatebot";
+                        $rawlocktextz = wikicontent($reportpagee);
                         $reasonz = 'Bot:Could not get lock. Lock file already present. Exit.';
-                        $site->initPage( 'User:SteinsplitterBot/Rotatebot' )->append( $locktextz, $reasonz );
+                        $resultz = $rawlocktextz . $locktextz;
+                        RotateEdit( $reportpagee, $resultz, $reasonz );
                         die("Could not get lock. Lock file already present.");
                 }
         }
