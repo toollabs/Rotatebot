@@ -898,6 +898,7 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
 }
 
 unset( $tools_mycnf, $tools_pw );
+$api->logout() ;
 suicide ("Bot finished.");
 sleep( 60 );
 // END script
