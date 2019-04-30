@@ -747,7 +747,9 @@ if ($config['MUploadTool'] == "false") {
         $fileUploader = $services->newFileUploader();
 
         $fileUploader = $services->newFileUploader();
-        $fileUploader->setChunkSize( 1024 * 1024 * 10 );
+        if ($config['Chunked'] == "true") {
+          $fileUploader->setChunkSize( 1024 * 1024 * 10 );
+        }
         $fileUploader->upload($targetName = $title2, $location= $titlelocal, $text = null, $comment = $filesum, $watchlist = 'nochange', $ignoreWarnings = 'true' );
 
          //$site->initImage( $title2 )->api_upload($titlelocal,'', $filesum, $watch = null, $ignorewarnings = true, $async = false );
