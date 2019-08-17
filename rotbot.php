@@ -53,7 +53,7 @@ function RotateEdit( $ptitle, $contents, $summarys ) {
 global $api;
 
 if ( !$api->isLoggedin() ) {
-die();
+die("NOT LOGGED IN");
 }
 
 $params = array (
@@ -748,7 +748,7 @@ if ($config['MUploadTool'] == "false") {
 
         $fileUploader = $services->newFileUploader();
         if ($config['Chunked'] == "true") {
-          $fileUploader->setChunkSize( 1024 * 1024 * 10 );
+          $fileUploader->setChunkSize( $config['ChunkSize'] );
         }
         $fileUploader->upload($targetName = $title2, $location= $titlelocal, $text = null, $comment = $filesum, $watchlist = 'nochange', $ignoreWarnings = 'true' );
 
@@ -900,7 +900,7 @@ if($somanyrot > 0 OR count($wrongfiles) > 0)
 }
 
 unset( $tools_mycnf, $tools_pw );
-$api->logout() ;
+
 suicide ("Bot finished.");
 sleep( 60 );
 // END script
