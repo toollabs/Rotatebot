@@ -1164,7 +1164,7 @@ function getLockOrDie($dontDieOnLockProblems, $holdtm) {
                         $locktextz = "\n<br style='clear:both;' clear='all' />\n----\n\n    <span style='color:red;text-decoration:blink'>Error</span> Bot locked itself after a internal problem (~~~~~).";
                         $reportpagee = "User:SteinsplitterBot/Rotatebot";
                         $rawlocktextz = wikicontent($reportpagee);
-                        $reasonz = 'Bot:Could not get lock. Lock file already present. Exit.';
+                        $reasonz = 'Bot: Could not get lock. Lock file already present. Exit.';
                         $resultz = $rawlocktextz . $locktextz;
                         RotateEdit( $reportpagee, $resultz, $reasonz );
                         die("Could not get lock. Lock file already present.");
