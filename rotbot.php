@@ -16,13 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-$homedir = "/data/project/sbot/Peachy/Rotatestuff/";
-$homedir2 = "/data/project/sbot/Peachy/";
-
+$homedir = "/data/project/rotbot/";
+$webdir  = "/data/project/rotbot/public_html/";
 $myLockfile = $homedir."rotatebotlock";
 
 ini_set('memory_limit', '1000M'); //Speicher auf 100 MBytes hochsetzen
-ini_set('user_agent', 'Steinsplitter (wmflabs; php) steinsplitter-wiki@live.com');
+ini_set('user_agent', 'SteinsplitterBot (rotbot; wmflabs; php)');
 
 // Dependency: https://github.com/addwiki/mediawiki-api
 
@@ -727,10 +726,10 @@ foreach($catcontent2 as $filename => $arraycontent)
 
 
 if ($config['MUploadTool'] == "false") {
-//      include("/data/project/sbot/Peachy/upload.php");
-//      include("/data/project/sbot/Peachy/login.php");
+//      include("/data/project/rotbot/Peachy/upload.php");
+//      include("/data/project/rotbot/Peachy/login.php");
 //      wikiupload("commons.wikimedia.org",$filename."_2.".$arraycontent['filetype'],substr($arraycontent['title'],5),"",$filesum);
-        echo "Old wiki upload has been disabled. Please install peachy dependencies and change config.";
+        echo "Old wiki upload has been disabled. Please install addwiki dependencies and change config.";
         suicide();
 } else {
         sleep(1);
@@ -741,7 +740,7 @@ if ($config['MUploadTool'] == "false") {
         }
         $title = $arraycontent['title'];
         $title2 = str_replace(" ", "_", $title);
-        $titlelocal =  "/data/project/sbot/Peachy/Rotatestuff/cache/".$filename."_2.".$arraycontent['filetype'];
+        $titlelocal =  "/data/project/rotbot/cache/".$filename."_2.".$arraycontent['filetype'];
 
         $services = new \Mediawiki\Api\MediawikiFactory( $api );
         $fileUploader = $services->newFileUploader();
@@ -809,9 +808,9 @@ logfile("Upload finished. Do error pictures now.");
 //Clean cache
 foreach($catcontent2 as $filename => $arraycontent)
 {
-unlink("/data/project/sbot/Peachy/Rotatestuff/cache/".$filename.".".$arraycontent['filetype']);
-unlink("/data/project/sbot/Peachy/Rotatestuff/cache/".$filename."_2.".$arraycontent['filetype']);
-unlink("/data/project/sbot/Peachy/Rotatestuff/cache/".$filename."_2.".$arraycontent['filetype']."_original");
+unlink("/data/project/rotbot/cache/".$filename.".".$arraycontent['filetype']);
+unlink("/data/project/rotbot/cache/".$filename."_2.".$arraycontent['filetype']);
+unlink("/data/project/rotbot/cache/".$filename."_2.".$arraycontent['filetype']."_original");
 }
 logfile("cache cleared. Write log now.");
 
@@ -909,10 +908,10 @@ sleep( 60 );
 
 function logfile($text)
 {
-  global $homedir2;
+  global $webdir;
   echo $text."\n";
   $ip = "". date("Y-m-d H:i:s") ." - ". $text . "\n";
-  file_put_contents( $homedir2."rotatelogs/". date("Y-m-d") ."-rotlog.txt", $ip, FILE_APPEND);
+  file_put_contents( $webdir."rotatelogs/". date("Y-m-d") ."-rotlog.txt", $ip, FILE_APPEND);
 }
 
 function timestampto($intime,$unix=false)
@@ -1023,9 +1022,9 @@ logfile("nothing to delete, just add");
 return $content;
 
 //COUNTER
-$counter = file_get_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt");
+$counter = file_get_contents("/data/project/rotbot/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt",$counter);
+file_put_contents("/data/project/rotbot/counter.txt",$counter);
 }
 else
 {
@@ -1051,9 +1050,9 @@ logfile("delete section 1 to $bereich");
 $intro = substr($content,0,$abschnittarray['1']);
 
 //COUNTER
-$counter = file_get_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt");
+$counter = file_get_contents("/data/project/rotbot/counter.txt");
 $counter = $counter + $newab;
-file_put_contents("/data/project/sbot/Peachy/Rotatestuff/counter.txt",$counter);
+file_put_contents("/data/project/rotbot/counter.txt",$counter);
 logfile("new counter: $counter.");
 
 $intro = sprintf($logheader."\n",$abschnitteneu,$counter); //NEU in settings definiert: der header vom Log
