@@ -746,7 +746,11 @@ if ($config['MUploadTool'] == "false") {
         $fileUploader = $services->newFileUploader();
 
         $fileUploader = $services->newFileUploader();
-        if ($config['Chunked'] == "true") {
+        $chksize = filesize($titlelocal);
+        echo "Filesize is ". $chksize ." bytes.\n";
+        if ($config['Chunked'] == "true" && $chksize >= $config['ChunkedStarter']) {
+         echo "Using chunked upload function for this big file.\n";
+         Logfile("Setting chunked uploads as upload methode.");
          $fileUploader->setChunkSize( 1024 * 1024 * 10 );
         }
         $fileUploader->upload($targetName = $title2, $location= $titlelocal, $text = null, $comment = $filesum, $watchlist = 'nochange', $ignoreWarnings = 'true' );
