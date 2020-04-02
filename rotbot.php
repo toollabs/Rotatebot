@@ -748,7 +748,6 @@ if ($config['MUploadTool'] == "false") {
         $fileUploader = $services->newFileUploader();
         if ($config['Chunked'] == "true") {
          $fileUploader->setChunkSize( 1024 * 1024 * 10 );
-         //$fileUploader->setChunkSize( $config['ChunkSize'] );
         }
         $fileUploader->upload($targetName = $title2, $location= $titlelocal, $text = null, $comment = $filesum, $watchlist = 'nochange', $ignoreWarnings = 'true' );
 
