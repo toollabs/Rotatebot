@@ -128,7 +128,19 @@ if ( $db->connect_errno ) {
         logfile("Failed to connect to labsdb.");
         die( "Failed to connect to labsdb: (" . $db->connect_errno . ") " . $db->connect_error );
     }
+
 //Datenbank verbunden
+
+
+// unlink old cache
+
+$cacheunlinks = glob('/data/project/rotbot/cache/*');
+foreach($cacheunlinks as $cacheunlink){
+  if(is_file($cacheunlink)) {
+    unlink($cacheunlink);
+    echo "rm " . $cacheunlink ;
+  }
+}
 
 $wrongfiles = array();
 
@@ -741,6 +753,13 @@ if ($config['MUploadTool'] == "false") {
         $title = $arraycontent['title'];
         $title2 = str_replace(" ", "_", $title);
         $titlelocal =  "/data/project/rotbot/cache/".$filename."_2.".$arraycontent['filetype'];
+
+        if (file_exists($titlelocal)) {
+                echo "The file " . $titlelocal . " exists.\n";
+        } else {
+                echo "\n\n\n!!!!!\nERROR: No local file found to upload! Skipping...\n!!!!!\n";
+                continue;
+        }
 
         $services = new \Mediawiki\Api\MediawikiFactory( $api );
         $fileUploader = $services->newFileUploader();
