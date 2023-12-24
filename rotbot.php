@@ -226,7 +226,7 @@ logfile("Checking ".$picture['title']."...");
 if(substr(strtolower($picture['title']),-4) == ".jpg" OR substr(strtolower($picture['title']),-5) == ".jpeg") { $catcontent[$arraykey]['filetype'] = "jpg"; }
 else if(substr(strtolower($picture['title']),-4) == ".png") { $catcontent[$arraykey]['filetype'] = "png"; }
 else if(substr(strtolower($picture['title']),-4) == ".gif") { $catcontent[$arraykey]['filetype'] = "gif"; }
-else if(substr(strtolower($picture['title']),-5) == ".tiff" OR substr(strtolower($picture['title']),-4) == ".tif") { $catcontent[$arraykey]['filetype'] = "tif"; }
+// if(substr(strtolower($picture['title']),-5) == ".tiff" OR substr(strtolower($picture['title']),-4) == ".tif") { $catcontent[$arraykey]['filetype'] = "tif"; }
 else { $wrongfile = true;
        $wrongfiles[$picture["title"]] = "filetype not supported (".substr(strtolower($picture['title']),-3).")";
         }
@@ -545,7 +545,7 @@ foreach($catcontent as $filename => $arraycontent)
                 case 180:
                 case 270:
                     //rotieren ...
-                    $cmd = "jpegtran -rotate ".$realrotate." -trim -copy all ".$savepath.$filename.".".$arraycontent['filetype']." > ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                    $cmd = "./bins/jpegtran -rotate ".$realrotate." -trim -copy all ".$savepath.$filename.".".$arraycontent['filetype']." > ".$savepath.$filename."_2.".$arraycontent['filetype'];
                     logfile($cmd);
                     passthru($cmd,$return);
                     logfile($arraycontent['title']." rotated by ".$realrotate."°.");
@@ -566,7 +566,7 @@ foreach($catcontent as $filename => $arraycontent)
                 if ($exif >= 10) {  //dupe Orientation tags?   Kill 'em all!
                                         // Needs to be removed because otherwise the duplicate tag stays
                         // first attempt
-                        $cmd = "/usr/bin/exiftool -IFD0:Orientation= -n  ".$savepath.$filename."_2.".$arraycontent['filetype'];
+                        $cmd = "./bins/exiftool -IFD0:Orientation= -n  ".$savepath.$filename."_2.".$arraycontent['filetype'];
                         logfile($cmd);
                         passthru($cmd,$retexifwrite);
 
@@ -646,7 +646,7 @@ foreach($catcontent as $filename => $arraycontent)
   }
   else //For png's und gif's
   {
-    passthru("/usr/bin/convert ".$savepath.$filename.".".$arraycontent['filetype']." -rotate ".$arraycontent['degree']." ".$savepath.$filename."_2.".$arraycontent['filetype'],$returnP);
+    passthru("./bins/convert ".$savepath.$filename.".".$arraycontent['filetype']." -rotate ".$arraycontent['degree']." ".$savepath.$filename."_2.".$arraycontent['filetype'],$returnP);
     logfile($arraycontent['title']." rotated by ".$arraycontent['degree']."°: ".$returnP);
   }
   // TODO:  ich bau mal ne Verwendung von $returnP in der Fehlerbehandlung nachfolgend ein..  der Fehlerwert beim PNG/GIF-Drehen wird gar nicht verwendet
@@ -752,14 +752,15 @@ if ($config['MUploadTool'] == "false") {
         }
         $title = $arraycontent['title'];
         $title2 = str_replace(" ", "_", $title);
-        $titlelocal =  "/data/project/rotbot/cache/".$filename."_2.".$arraycontent['filetype'];
+//        $titlelocal =  "/data/project/rotbot/cache/".$filename."_2.".$arraycontent['filetype'];
+        $titlelocal =  $savepath.$filename."_2.".$arraycontent['filetype'];
 
-        if (file_exists($titlelocal)) {
-                echo "The file " . $titlelocal . " exists.\n";
-        } else {
-                echo "\n\n\n!!!!!\nERROR: No local file found to upload! Skipping...\n!!!!!\n";
-                continue;
-        }
+	if (file_exists($titlelocal)) {
+		echo "The file " . $titlelocal . " exists.\n";
+	} else {
+		echo "\n\n\n!!!!!\nERROR: No local file found to upload! Skipping...\n!!!!!\n";
+		continue;
+	}
 
         $services = new \Mediawiki\Api\MediawikiFactory( $api );
         $fileUploader = $services->newFileUploader();
