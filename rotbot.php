@@ -23,8 +23,6 @@ $myLockfile = $homedir."rotatebotlock";
 ini_set('memory_limit', '1000M'); //Speicher auf 100 MBytes hochsetzen
 ini_set('user_agent', 'SteinsplitterBot (rotbot; wmflabs; php)');
 
-// Dependency: https://github.com/addwiki/mediawiki-api
-
 function getrawhttp($url) {
         $con = curl_init();
         $to = 4;
