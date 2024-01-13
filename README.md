@@ -7,3 +7,7 @@ The bot reads its user name and password from a file named `accessdata.php`, put
 $botusername = "BotName";
 $botkey = "BotPasswordName@BotPassword";
 ```
+
+You can optionally specify an API URL as well (useful for testing with a local wiki or Beta Commons, not necessary for production use):
+```
+$botapi = "https://commons.wikimedia.beta.wmflabs.org/w/api.php";

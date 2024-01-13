@@ -1,5 +1,6 @@
 {
     "require": {
+        "php": ">=7.4.0",
         "addwiki/mediawiki-api-base": "~2.0",
         "addwiki/mediawiki-api": "~0.7.0"
     }
