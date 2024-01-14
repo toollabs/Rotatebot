@@ -4,7 +4,3 @@
   image: php7.4
   command: php ./rotbot.php
   schedule: '@hourly'
-- name: rotatebotlock
-  image: bullseye
-  command: rm /data/project/rotbot/rotatebotlock
-  schedule: '0 */7 * * *'

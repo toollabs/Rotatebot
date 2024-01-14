@@ -54,8 +54,6 @@ class RotateBotConfig {
         public string $maxlockfiletime = '';
         /** Minimal lag of the bot in minutes */
         public int $lag = 0;
-        /** Kill all running rotatebots? */
-        public bool $killAllRotatebots = false;
         /** Do not die if there are lock problems? (true/false) */
         public string $dontDieOnLockProblems = '';
         public string $uploadsummary = '';
@@ -148,8 +146,6 @@ class RotateBot {
         private const HOME_DIR = __DIR__;
         /** Directory to write logs into (in addition to standard output) */
         private const LOG_DIR = RotateBot::HOME_DIR . '/public_html/rotatelogs/';
-        /** Name of the lock file ensuring that only a single instance of RotateBot is running. */
-        private const LOCK_FILE = RotateBot::HOME_DIR . '/rotatebotlock';
         /** Directory to download images to */
         private const CACHE_DIR = RotateBot::HOME_DIR . '/cache/';
 
@@ -168,10 +164,6 @@ class RotateBot {
                 $this->config = new RotateBotConfig( $this->getPageContent( 'User:SteinsplitterBot/rconfig.js' ) );
         }
 
-        public function __destruct() {
-                $this->removeLock();
-        }
-
         private function login(): MediaWikiApi {
                 include 'accessdata.php';
                 $api = new MediawikiApi( $botapi ?? 'https://commons.wikimedia.org/w/api.php' );
@@ -182,32 +174,14 @@ class RotateBot {
         public static function run(): void {
                 $bot = new static();
                 if ($bot->config->active) {
-                        if ($bot->config->killAllRotatebots) {
-                                $bot->killAllRotatebots();
-                        } else {
-                                $bot->runNormal();
-                        }
+                        $bot->runNormal();
                 } else {
                         throw new RuntimeException('Bot disabled.');
                         echo "Bot disabled.\n";
                 }
         }
 
-        private function killAllRotatebots(): void {
-                $this->logfile("ATTENTION: Going to killAllRotatebots (also myself)!");
-                // "php rotbot/rotbot.php" needs to be the process name
-                $this->logfile("signal 15");
-                system("pkill -15 -f 'php rotbot/rotbot.php'");
-                sleep(10);
-                $this->logfile("signal 9");
-                system("pkill -9 -f 'php rotbot/rotbot.php'");
-                // we should be all dead now
-                echo "killAllRotatebots is true. Cannot start!\n";
-        }
-
         private function runNormal(): void {
-                $this->getLockOrDie();
-
                 // unlink old cache
                 foreach (glob(RotateBot::CACHE_DIR . '*') as $cacheunlink) {
                         if(is_file($cacheunlink)) {
@@ -996,69 +970,6 @@ class RotateBot {
                         $string .= chr(hexdec($hex[$i].$hex[$i+1]));
                 }
                 return $string;
-        }
-
-        /**
-         * Check for other concurrently running rotatebot instances.
-         * @throws RuntimeException If not alone in the world, and `dontDieOnLockProblems` isn’t set
-         */
-        private function getLockOrDie(): void {
-                $myLockfile = RotateBot::LOCK_FILE;
-                $dontDieOnLockProblems = $this->config->dontDieOnLockProblems == 'true';
-                if ($dontDieOnLockProblems) {
-                        $this->logfile("ATTENTION: dontDieOnLockProblems is true! Lockfile problems (like lockfile already present) will be ignored.");
-                }
-
-                if (!file_exists($myLockfile)) {
-                        system("touch ".$myLockfile);
-                        if (!file_exists($myLockfile)) {
-                                if ($dontDieOnLockProblems) {
-                                        $this->logfile("Could not create lock file. DontDieMode prevents death.");
-                                } else {
-                                        throw new RuntimeException('Could not create lock file');
-                                }
-                        }
-                } else {
-                        if ($dontDieOnLockProblems) {
-                                $this->logfile("Could not get lock. Lock file already present. DontDieMode prevents death.");
-
-                        } else {
-                                system("touch ".$myLockfile);
-                                $holdtm = $this->config->maxlockfiletime;
-                                if (time()-filemtime($myLockfile) > $holdtm) {
-                                        $this->logfile("Lockfile older than $holdtm,  Removing lock file...");
-                                        system("rm ".$myLockfile);
-                                        sleep(6);
-                                        if (file_exists($myLockfile)) {
-                                                $this->logfile("Warning: Lockfile was *not* removed.");
-                                        } else {
-                                                $this->logfile("Lockfile removed. Setting up for a restart (may take a while)...");
-                                        }
-                                        throw new RuntimeException;
-                                }
-
-                                $locktextz = "\n<br style='clear:both;' clear='all' />\n----\n\n    <span style='color:red;text-decoration:blink'>Error</span> Bot locked itself after a internal problem (~~~~~).";
-                                $rawlocktextz = $this->getPageContent(RotateBot::REPORT_PAGE);
-                                $reasonz = 'Bot: Could not get lock. Lock file already present. Exit.';
-                                $resultz = $rawlocktextz . $locktextz;
-                                $this->editPage(RotateBot::REPORT_PAGE, $resultz, $reasonz);
-                                throw new RuntimeException("Could not get lock. Lock file already present.");
-                        }
-                }
-        }
-
-        /** Try to remove the lock file, log any errors. */
-        private function removeLock() {
-                $myLockfile = RotateBot::LOCK_FILE;
-
-                if (file_exists($myLockfile)) {
-                        system("rm ".$myLockfile);
-                        if (file_exists($myLockfile)) {
-                                $this->logfile("Warning: for some reason the lockfile could not be removed.");
-                        }
-                } else {
-                        $this->logfile("Warning: for some reason the lockfile was missing although it was expected to exist.");
-                }
         }
 
         private function logfile(string $text): void {
