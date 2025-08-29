@@ -291,7 +291,7 @@ class RotateBot {
                 if(substr(strtolower($picture['title']),-4) == ".jpg" OR substr(strtolower($picture['title']),-5) == ".jpeg") { $image->filetype = "jpg"; }
                 else if(substr(strtolower($picture['title']),-4) == ".png") { $image->filetype = "png"; }
                 else if(substr(strtolower($picture['title']),-4) == ".gif") { $image->filetype = "gif"; }
-                // if(substr(strtolower($picture['title']),-5) == ".tiff" OR substr(strtolower($picture['title']),-4) == ".tif") { $image->filetype = "tif"; }
+                if(preg_match('/\.tiff?$/i',$picture['title'])) { $image->filetype = "tif"; }
                 else { $image->wrongfile = "filetype not supported (".substr(strtolower($image->title),-3).")"; }
                 //sortkey ab umbruchstelle beschneiden
                 $image->degree = trim(stristr($this->hexToStr($picture["sortkey"]), "\n", true));
